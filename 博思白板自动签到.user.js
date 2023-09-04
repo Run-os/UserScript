@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         博思白板自动签到
-// @namespace    https://github.com/liuyz0112/UserScript/raw/main/%E5%8D%9A%E6%80%9D%E7%99%BD%E6%9D%BF%E8%87%AA%E5%8A%A8%E7%AD%BE%E5%88%B0.user.js
+// @namespace    https://github.com/liuyz0112/UserScript
 // @version      1.1.0
 // @description  尝试自动签到博思白板获取AI点数
 // @author       Runos
