@@ -1,9 +1,8 @@
 # Runos/UserScript
 
-自用UserScript脚本
+自用UserScript脚本，小白尝试编写的脚本，利用GPT协助
 
 ## 脚本列表
-> _小白尝试编写的脚本，利用GPT协助~_
 > 点击安装跳转Greasy Fork安装脚本  
 
 |  | 脚本名称 | 脚本功能 | 安装 |
