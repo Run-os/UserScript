@@ -5,9 +5,9 @@
 // @version      1.1.6
 // @description  尝试自动签到博思白板获取AI点数
 // @author       Runos
-// @match        https://boardmix.cn/app/editor/*
+// @match        https://boardmix.cn/app/*
 // @license      GPL-3.0 License
-// @lasttime     2023-09-07 17:01:54
+// @lasttime     2023-09-07 19:42:45
 // ==/UserScript==
 
 // 创建一个 div 元素作为提示框的容器
@@ -37,6 +37,14 @@ var time = ("0" + date.getHours()).slice(-2) + ":" + ("0" + date.getMinutes()).s
 
 // 获取当前时间
 var currentTime = new Date().getTime();
+
+// 判断网页URL是否匹配正则表达式
+var regex = /^https:\/\/boardmix\.cn\/app\/editor\/.*/;
+if (regex.test(window.location.href) == false) {
+    stopScript = true
+    return; // 退出函数
+}
+
 
 // 如果上次运行时间不存在，或者距离上次运行时间已经过去一天以上，就运行脚本
 if (!lastRunTime || currentTime - lastRunTime > 24 * 60 * 60 * 1000) {
