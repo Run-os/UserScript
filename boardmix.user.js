@@ -7,6 +7,7 @@
 // @author       Runos
 // @match        https://boardmix.cn/app/editor/*
 // @license      GPL-3.0 License
+// @lasttime     2023-09-07 16:59:22
 // ==/UserScript==
 
 // 创建一个 div 元素作为提示框的容器
