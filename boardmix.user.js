@@ -2,7 +2,7 @@
 // @name         博思白板自动签到
 // @namespace    https://greasyfork.org/zh-CN/scripts/474533
 // @homepageURL  https://github.com/liuyz0112/UserScript
-// @version      1.1.4
+// @version      1.1.5
 // @description  尝试自动签到博思白板获取AI点数
 // @author       Runos
 // @match        https://boardmix.cn/app/editor/*
@@ -78,6 +78,12 @@ if (!lastRunTime || currentTime - lastRunTime > 24 * 60 * 60 * 1000) {
                             }
                         } else {
                             //如果没有签到则表明签到失败，停止脚本
+                            // 显示提示框，并在 2 秒后隐藏
+                            message.textContent = "签到失败/(ㄒoㄒ)/~~";
+                            message.style.display = "block";
+                            setTimeout(function () {
+                                message.style.display = "none";
+                            }, 2000);
                             stopScript = true
                             return; // 退出函数
                         }
