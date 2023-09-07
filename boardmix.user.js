@@ -2,12 +2,12 @@
 // @name         博思白板自动签到
 // @namespace    https://greasyfork.org/zh-CN/scripts/474533
 // @homepageURL  https://github.com/liuyz0112/UserScript
-// @version      1.1.5
+// @version      1.1.6
 // @description  尝试自动签到博思白板获取AI点数
 // @author       Runos
 // @match        https://boardmix.cn/app/editor/*
 // @license      GPL-3.0 License
-// @lasttime     2023-09-07 16:59:22
+// @lasttime     2023-09-07 17:01:54
 // ==/UserScript==
 
 // 创建一个 div 元素作为提示框的容器
