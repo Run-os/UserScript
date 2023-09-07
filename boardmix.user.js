@@ -2,13 +2,17 @@
 // @name         博思白板自动签到
 // @namespace    https://greasyfork.org/zh-CN/scripts/474533
 // @homepageURL  https://github.com/liuyz0112/UserScript
-// @version      1.1.6
+// @version      1.1.7
 // @description  尝试自动签到博思白板获取AI点数
 // @author       Runos
 // @match        https://boardmix.cn/app/*
 // @license      GPL-3.0 License
-// @lasttime     2023-09-07 19:42:45
 // ==/UserScript==
+
+// ==describe==
+// @lasttime     2023-09-07 19:50:44
+// ==describe==
+
 
 // 创建一个 div 元素作为提示框的容器
 var message = document.createElement("div");
@@ -34,9 +38,9 @@ var lastRunTime = localStorage.getItem("boardmix-lastRunTime");
 var date = new Date(parseInt(lastRunTime));
 // 将日期格式化为几点几分的字符串
 var time = ("0" + date.getHours()).slice(-2) + ":" + ("0" + date.getMinutes()).slice(-2);
-
 // 获取当前时间
 var currentTime = new Date().getTime();
+
 
 // 判断网页URL是否匹配正则表达式
 var regex = /^https:\/\/boardmix\.cn\/app\/editor\/.*/;
