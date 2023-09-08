@@ -2,7 +2,7 @@
 // @name         博思白板自动签到
 // @namespace    https://greasyfork.org/zh-CN/scripts/474533
 // @homepageURL  https://github.com/liuyz0112/UserScript
-// @version      1.1.12
+// @version      1.1.13
 // @description  尝试自动签到博思白板获取AI点数
 // @author       Runos
 // @match        https://boardmix.cn/app/*
@@ -10,7 +10,7 @@
 // ==/UserScript==
 
 // ==describe==
-// @lasttime      2023-09-07 23:00:06
+// @lasttime      2023-09-08 08:47:13
 // ==describe==
 
 
@@ -50,8 +50,8 @@ if (regex.test(window.location.href) == false) {
 }
 
 
-// 如果上次运行时间不存在，或者距离上次运行时间已经过去一天以上，就运行脚本
-if (!lastRunTime || currentTime - lastRunTime > 24 * 60 * 60 * 1000) {
+// 如果上次运行时间不存在，或者距离上次运行时间已经过去6小时以上，就运行脚本
+if (!lastRunTime || currentTime - lastRunTime > 6 * 60 * 60 * 1000) {
     // 运行脚本代码
     function clickExpandSign() {
         //打开签到界面
