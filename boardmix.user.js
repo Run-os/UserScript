@@ -2,7 +2,7 @@
 // @name         博思白板自动签到
 // @namespace    https://greasyfork.org/zh-CN/scripts/474533
 // @homepageURL  https://github.com/liuyz0112/UserScript
-// @version      1.1.13
+// @version      1.1.14
 // @description  尝试自动签到博思白板获取AI点数
 // @author       Runos
 // @match        https://boardmix.cn/app/*
@@ -10,7 +10,7 @@
 // ==/UserScript==
 
 // ==describe==
-// @lasttime      2023-09-08 08:47:13
+// @lasttime      2023-09-08 08:53:08
 // ==describe==
 
 
@@ -40,6 +40,7 @@ var date = new Date(parseInt(lastRunTime));
 var time = ("0" + date.getHours()).slice(-2) + ":" + ("0" + date.getMinutes()).slice(-2);
 // 获取当前时间
 var currentTime = new Date().getTime();
+var counter = 0;
 
 
 // 判断网页URL是否匹配正则表达式
@@ -71,9 +72,7 @@ if (!lastRunTime || currentTime - lastRunTime > 6 * 60 * 60 * 1000) {
                     // 保存本次运行时间
                     localStorage.setItem("boardmix-lastRunTime", currentTime);
                     stopScript = true
-                }
-                //还没有签到则点击签到
-                if (primaryButton) {
+                } else if (primaryButton) {//还没有签到则点击签到
                     primaryButton.click();
                     // 显示提示框，并在 2 秒后隐藏
                     message.textContent = "签到成功😀";
@@ -108,6 +107,14 @@ if (!lastRunTime || currentTime - lastRunTime > 6 * 60 * 60 * 1000) {
         } else {
             //循环寻找打开签到界面的按钮直到找到
             setTimeout(clickExpandSign, 1000);
+            const intervalId = setInterval(() => {
+                clickExpandSign();
+                counter++;
+
+                if (counter === 30) {
+                    clearInterval(intervalId);
+                }
+            }, 1000);
         }
     }
     clickExpandSign();
