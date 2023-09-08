@@ -2,7 +2,7 @@
 // @name         博思白板自动签到
 // @namespace    https://greasyfork.org/zh-CN/scripts/474533
 // @homepageURL  https://github.com/liuyz0112/UserScript
-// @version      1.1.14
+// @version      1.1.16
 // @description  尝试自动签到博思白板获取AI点数
 // @author       Runos
 // @match        https://boardmix.cn/app/*
@@ -10,7 +10,7 @@
 // ==/UserScript==
 
 // ==describe==
-// @lasttime      2023-09-08 08:53:08
+// @lasttime      2023-09-08 08:54:59
 // ==describe==
 
 
@@ -41,6 +41,7 @@ var time = ("0" + date.getHours()).slice(-2) + ":" + ("0" + date.getMinutes()).s
 // 获取当前时间
 var currentTime = new Date().getTime();
 var counter = 0;
+var stopScript
 
 
 // 判断网页URL是否匹配正则表达式
