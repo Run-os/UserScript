@@ -2,7 +2,7 @@
 // @name         博思白板自动签到
 // @namespace    https://greasyfork.org/zh-CN/scripts/474533
 // @homepageURL  https://github.com/liuyz0112/UserScript
-// @version      1.1.21
+// @version      1.1.22
 // @description  尝试自动签到博思白板获取AI点数
 // @author       Runos
 // @match        https://boardmix.cn/app/*
@@ -11,7 +11,7 @@
 // ==/UserScript==
 
 // ==describe==
-// @lasttime      2023-09-11 22:52:50
+// @lasttime      2023-09-12 14:07:32
 // ==describe==
 
 
@@ -74,6 +74,7 @@ if (!lastRunTime || currentTime - lastRunTime > 6 * 60 * 60 * 1000) {
                     // 保存本次运行时间
                     localStorage.setItem("boardmix-lastRunTime", currentTime);
                     stopScript = true
+                    return; // 退出函数
                 } else if (primaryButton) {//还没有签到则点击签到
                     primaryButton.click();
                     // 显示提示框，并在 2 秒后隐藏
@@ -82,7 +83,6 @@ if (!lastRunTime || currentTime - lastRunTime > 6 * 60 * 60 * 1000) {
                     setTimeout(function () {
                         message.style.display = "none";
                     }, 2000);
-
                     setTimeout(function () {
                         if (signInButton) {
                             //如果已经签到则关闭界面
