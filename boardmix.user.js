@@ -2,7 +2,7 @@
 // @name         博思白板自动签到
 // @namespace    https://greasyfork.org/zh-CN/scripts/474533
 // @homepageURL  https://github.com/liuyz0112/UserScript
-// @version      1.1.22
+// @version      1.1.23
 // @description  尝试自动签到博思白板获取AI点数
 // @author       Runos
 // @match        https://boardmix.cn/app/*
@@ -11,7 +11,7 @@
 // ==/UserScript==
 
 // ==describe==
-// @lasttime      2023-09-12 14:07:32
+// @lasttime      2023-09-14 20:22:23
 // ==describe==
 
 
@@ -90,7 +90,7 @@ if (!lastRunTime || currentTime - lastRunTime > 6 * 60 * 60 * 1000) {
                                 //关闭签到界面
                                 closeButton.click();
                             }
-                        } 
+                        }
                     }, 3000)
                     // 保存本次运行时间
                     localStorage.setItem("boardmix-lastRunTime", currentTime);
@@ -100,11 +100,11 @@ if (!lastRunTime || currentTime - lastRunTime > 6 * 60 * 60 * 1000) {
             }, 1000);
         } else {
             //循环寻找打开签到界面的按钮直到找到
-            setTimeout(clickExpandSign, 1000);
+            setTimeout(clickExpandSign, 800);
             const intervalId = setInterval(() => {
                 clickExpandSign();
                 counter++;
-                if (counter === 30) {
+                if (counter === 10) {
                     clearInterval(intervalId);
                 }
             }, 1000);
