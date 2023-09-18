@@ -2,7 +2,7 @@
 // @name         博思白板自动签到
 // @namespace    https://greasyfork.org/zh-CN/scripts/474533
 // @homepageURL  https://github.com/liuyz0112/UserScript
-// @version      1.2.4
+// @version      1.2.6
 // @description  尝试自动签到博思白板获取AI点数
 // @author       Runos
 // @match        https://boardmix.cn/app/*
@@ -11,7 +11,7 @@
 // ==/UserScript==
 
 // ==describe==
-// @lasttime      2023-09-18 08:15:04
+// @lasttime      2023-09-18 08:31:40
 // @downland      https://github.com/liuyz0112/UserScript/raw/main/boardmix.user.js
 // ==describe==
 
@@ -36,7 +36,6 @@ document.body.appendChild(message);
 
 // 读取上次运行时间
 var lastRunTime = localStorage.getItem("boardmix-lastRunTime");
-var count = localStorage.getItem("boardmix-count");
 // 将时间戳转换为 Date 对象
 var date = new Date(parseInt(lastRunTime));
 // 将日期格式化为几点几分的字符串
@@ -63,10 +62,13 @@ function toast(wenzi) {
 
 //获取已签到次数
 function Completed() {
-    // 获取指定CSS选择器的元素集合
-    let elements = document.querySelectorAll('.ai-sign-in--content-daily-item-day');
-    // 获取元素数量
-    let count = elements.length;
+    const elements = document.querySelectorAll('.ai-sign-in--content-daily-item-day');
+    let count = 0;
+    elements.forEach(element => {
+        if (element.innerText === '已领取') {
+            count++;
+        }
+    });
     // 输出数量
     localStorage.setItem("boardmix-count", count);
 }
@@ -83,6 +85,8 @@ function clickExpandSign() {
             let primaryButton = document.querySelector(".ai-sign-in--content-sign .ed-button__primary");//签到
             let signInButton = document.querySelector(".ed-button__primary.ai-sign-in--content-sign-btn__disabled");//已签到
             let closeButton = document.querySelector(".ai-sign-in--title-right-close");//关闭签到界面
+
+
 
             //如果已经签到则退出界面
             if (signInButton) {
@@ -132,6 +136,7 @@ if (!lastRunTime || currentTime - lastRunTime > 6 * 60 * 60 * 1000) {
     const timer = setInterval(checkCondition, 1000);
 } else {
     // 显示提示框，并在 2 秒后隐藏
+    var count = localStorage.getItem("boardmix-count");
     toast("⚡今天 " + time + " 已签到，🔥本周已经签到了 " + count + " 次啦");
 
 }
