@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         博思白板自动签到
+// @name         test
 // @namespace    https://greasyfork.org/zh-CN/scripts/474533
 // @homepageURL  https://github.com/liuyz0112/UserScript
-// @version      1.2.4
+// @version      1.2.2
 // @description  尝试自动签到博思白板获取AI点数
 // @author       Runos
 // @match        https://boardmix.cn/app/*
@@ -11,7 +11,7 @@
 // ==/UserScript==
 
 // ==describe==
-// @lasttime      2023-09-18 08:15:04
+// @lasttime      2023-09-15 15:33:13
 // @downland      https://github.com/liuyz0112/UserScript/raw/main/boardmix.user.js
 // ==describe==
 
