@@ -51,13 +51,12 @@ function toast(wenzi) {
             }
         }, 1000); // 在点击后再等待1秒进行检查
 
-        window.addEventListener('load', function () {
-            var event = new KeyboardEvent('keydown', {
-                key: 'Enter',
-                shiftKey: true
-            });
-            document.dispatchEvent(event);
+        var event = new KeyboardEvent('keydown', {
+            key: 'Enter',
+            shiftKey: true
         });
+        document.dispatchEvent(event);
+
     }, 5000); // 等待5秒后触发
 })();
 
