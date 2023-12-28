@@ -18,10 +18,11 @@ message.style.left = "50%";
 message.style.transform = "translate(-50%, -50%)";
 message.style.background = "#fff";
 message.style.border = "1px solid #ccc";
-message.style.padding = "10px";
+message.style.padding = "20px";
 message.style.borderRadius = "5px";
 message.style.boxShadow = "2px 2px 5px rgba(0, 0, 0, 0.3)";
 message.style.zIndex = "9999";
+message.style.fontSize = "16px"
 message.style.display = "none"; // 初始状态下不显示
 // 将提示框添加到页面中
 document.body.appendChild(message);
