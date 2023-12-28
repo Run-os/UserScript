@@ -49,13 +49,8 @@ function toast(wenzi) {
             } else {
                 toast("⚡自动打开中文字幕失败😢");
             }
-        }, 1000); // 在点击后再等待1秒进行检查
 
-        var event = new KeyboardEvent('keydown', {
-            key: 'Enter',
-            shiftKey: true
-        });
-        document.dispatchEvent(event);
+        }, 1000); // 在点击后再等待1秒进行检查
 
     }, 5000); // 等待5秒后触发
 })();
