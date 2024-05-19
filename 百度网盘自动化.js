@@ -1,9 +1,9 @@
 // ==UserScript==
 // @name         百度网盘打开中文字幕
 // @namespace    http://tampermonkey.net/
-// @version      2023-12-28
+// @version      24.5.19
 // @description  百度网盘自动打开中文字幕
-// @author       You
+// @author       Run-os
 // @match        https://pan.baidu.com/pfile/video?path=*.mp4*
 // @icon         https://nd-static.bdstatic.com/m-static/v20-main/home/img/icon-home-new.b4083345.png
 // @grant        none
