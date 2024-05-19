@@ -5,7 +5,7 @@
 // @description  百度网盘自动打开中文字幕
 // @author       Run-os
 // @match        https://pan.baidu.com/pfile/video?path=*.mp4*
-// @icon         https://nd-static.bdstatic.com/m-static/v20-main/home/img/icon-home-new.b4083345.png
+// @icon         https://th.bing.com/th?id=ODLS.039b3eb8-253e-4d80-8727-6e7d039c3891&w=32&h=32&qlt=90&pcl=fffffa&o=6&pid=1.2
 // @grant        none
 // @license      MIT
 // ==/UserScript==
@@ -64,4 +64,3 @@ function toast(wenzi) {
         }
     }, intervalTime);
 })();
-
