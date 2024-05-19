@@ -56,7 +56,7 @@ function toast(wenzi) {
                 } else {
                     toast("⚡自动打开中文字幕失败😢");
                 }
-            }, 500); // 点击后再等待1秒进行检查
+            }, 1000); // 点击后再等待1秒进行检查
 
         } else if (Date.now() - startTime > maxWaitTime) {
             clearInterval(interval); // 停止检测
