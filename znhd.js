@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         征纳互动人数监控
 // @namespace    http://tampermonkey.net/
-// @version      1.9
+// @version      1.11
 // @description  监控征纳互动等待人数变化并进行语音提示，带折叠面板
 // @author       runos
 // @match        https://znhd.hunan.chinatax.gov.cn:8443/*
@@ -194,16 +194,10 @@
 
             if (currentCount === 0) {
                 addLog('当前等待人数为0', 'success');
-                var lastCount = 0;
             } else if (currentCount < 5) {
                 // 使用具体数字替代length比较
-                if (lastCount < 5) {
-                    lastCount = lastCount + 1;
-                    addLog(`当前等待人数: ${currentCount}`, 'info');
-                    speak("征纳互动有人来了");
-                } else {
-                    addLog("当前已通知5次，等待归零", 'warning')
-                }
+                addLog(`当前等待人数: ${currentCount}`, 'info');
+                speak("征纳互动有人来了");
             }
 
             // 检查离线状态
