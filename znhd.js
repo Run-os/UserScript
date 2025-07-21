@@ -1,10 +1,11 @@
 // ==UserScript==
 // @name         征纳互动人数监控
 // @namespace    http://tampermonkey.net/
-// @version      1.13
+// @version      1.14
 // @description  监控征纳互动等待人数变化并进行语音提示，带折叠面板
 // @author       runos
 // @match        https://znhd.hunan.chinatax.gov.cn:8443/*
+// @icon         data:image/png;base64,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
 // @grant        GM_addStyle
 // @grant        unsafeWindow
 // @homepage     https://scriptcat.org/zh-CN/script-show-page/3650
@@ -403,7 +404,14 @@
     // 初始化监控
     function initMonitor() {
         createControlPanel();
-        speak("监控启动");
+
+        // 只在工作时间内播放启动语音
+        if (isWorkingHours()) {
+            speak("监控启动");
+        } else {
+            addLog('当前不在工作时间，监控已启动但暂停语音提示', 'warning');
+        }
+
         // 每3秒检查一次
         setInterval(checkCount, 3000);
     }
