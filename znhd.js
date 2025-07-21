@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         征纳互动人数监控
 // @namespace    http://tampermonkey.net/
-// @version      1.12
+// @version      1.13
 // @description  监控征纳互动等待人数变化并进行语音提示，带折叠面板
 // @author       runos
 // @match        https://znhd.hunan.chinatax.gov.cn:8443/*
@@ -230,13 +230,13 @@
 
     let firstSpeak = true;
 
-    function speak(text, voiceEnabled = true) {
+    function speak(text) {
         if (firstSpeak && !voicesReady) {
             const checkVoices = () => {
                 if (voicesReady) {
                     firstSpeak = false;
                     addLog('语音首次加载完成，可以开始播报。', 'info');
-                    speak(text, voiceEnabled);
+                    speak(text);
                 } else {
                     setTimeout(checkVoices, 100);
                     addLog("等待语音加载完成", "info");
@@ -256,7 +256,7 @@
     }
 
     function processSpeechQueue() {
-        if (isSpeaking || speechQueue.length === 0) return;
+        if (isSpeaking || speechQueue.length === 0 || !voiceEnabled) return;
 
         isSpeaking = true;
         const utterance = speechQueue.shift();
@@ -349,10 +349,19 @@
         const toggleBtn = document.createElement('button');
         toggleBtn.id = 'toggleVoiceBtn';
         toggleBtn.textContent = voiceEnabled ? '🔊 语音' : '🔇 静音';
+        toggleBtn.className = voiceEnabled ? 'voice-enabled' : 'voice-disabled';
         toggleBtn.title = voiceEnabled ? '关闭语音提示' : '开启语音提示';
         toggleBtn.onclick = (e) => {
             e.stopPropagation(); // 阻止冒泡，避免触发折叠
             voiceEnabled = !voiceEnabled;
+
+            // 如果禁用语音，立即停止当前播放的语音并清空队列
+            if (!voiceEnabled) {
+                window.speechSynthesis.cancel();
+                speechQueue.length = 0;
+                isSpeaking = false;
+            }
+
             toggleBtn.textContent = voiceEnabled ? '🔊 语音' : '🔇 静音';
             toggleBtn.className = voiceEnabled ? 'voice-enabled' : 'voice-disabled';
             toggleBtn.title = voiceEnabled ? '关闭语音提示' : '开启语音提示';
