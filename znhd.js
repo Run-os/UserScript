@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         征纳互动人数监控
 // @namespace    http://tampermonkey.net/
-// @version      2.1
+// @version      25.7.22
 // @description  监控征纳互动等待人数变化并进行语音提示，带折叠面板
 // @author       runos
 // @match        https://znhd.hunan.chinatax.gov.cn:8443/*

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         百度网盘打开中文字幕
 // @namespace    http://tampermonkey.net/
-// @version      24.5.19
+// @version      25.7.22
 // @description  百度网盘自动打开中文字幕
 // @author       Run-os
 // @match        https://pan.baidu.com/pfile/video?path=*.mp4*
@@ -12,7 +12,7 @@
 // ==/UserScript==
 
 // 创建一个 div 元素作为提示框的容器
-var message = document.createElement("div");
+const message = document.createElement("div");
 // 设置提示框的样式
 message.style.position = "fixed";
 message.style.top = "80%";
@@ -24,14 +24,14 @@ message.style.padding = "20px";
 message.style.borderRadius = "5px";
 message.style.boxShadow = "2px 2px 5px rgba(0, 0, 0, 0.3)";
 message.style.zIndex = "9999";
-message.style.fontSize = "16px"
+message.style.fontSize = "16px";
 message.style.display = "none"; // 初始状态下不显示
 // 将提示框添加到页面中
 document.body.appendChild(message);
 
 //提示框
-function toast(wenzi) {
-    message.textContent = wenzi;
+function toast(text) {
+    message.textContent = text;
     message.style.display = "block";
     setTimeout(function () {
         message.style.display = "none";
@@ -41,18 +41,23 @@ function toast(wenzi) {
 (function () {
     'use strict';
 
-    var maxWaitTime = 60000; // 最多等待1分钟
-    var intervalTime = 2000; // 每2秒检查一次
+    const maxWaitTime = 60000; // 最多等待1分钟
+    const intervalTime = 2000; // 每2秒检查一次
+    const subtitleSelector = 'li.vp-video__control-bar--video-subtitles-select-item:nth-child(2)';
 
-    var startTime = Date.now();
+    const startTime = Date.now();
 
-    var interval = setInterval(function () {
-        if (document.querySelector('li.vp-video__control-bar--video-subtitles-select-item:nth-child(2)')) {
+    const interval = setInterval(function () {
+        const subtitleElement = document.querySelector(subtitleSelector);
+
+        if (subtitleElement) {
             clearInterval(interval); // 停止检测
-            document.querySelector('li.vp-video__control-bar--video-subtitles-select-item:nth-child(2)').click();
+            subtitleElement.click();
 
             setTimeout(function () {
-                if (document.querySelector('li.vp-video__control-bar--video-subtitles-select-item:nth-child(2)').classList.contains('is-checked')) {
+                // 重新查询元素以确保它仍然存在
+                const checkedElement = document.querySelector(subtitleSelector);
+                if (checkedElement && checkedElement.classList.contains('is-checked')) {
                     toast("⚡自动打开中文字幕成功😊");
                 } else {
                     toast("⚡自动打开中文字幕失败😢");
