@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         征纳互动人数监控
 // @namespace    http://tampermonkey.net/
-// @version      1.14
+// @version      2.1
 // @description  监控征纳互动等待人数变化并进行语音提示，带折叠面板
 // @author       runos
 // @match        https://znhd.hunan.chinatax.gov.cn:8443/*
@@ -34,7 +34,7 @@
         }
 
         #monitorLogContainer.collapsed {
-            max-height: none; // 移除最大高度限制，仅折叠日志部分
+            max-height: none; /* 移除最大高度限制，仅折叠日志部分 */
             overflow: hidden;
         }
 
@@ -48,7 +48,7 @@
             cursor: pointer;
             border-top-left-radius: 12px;
             border-top-right-radius: 12px;
-            font-size: 12px; // 调小头部字体大小
+            font-size: 12px; /* 调小头部字体大小 */
         }
 
         #monitorLogs {
@@ -83,7 +83,8 @@
             color: #4caf50; /* 更鲜明的成功色 */
         }
 
-        #toggleCollapseBtn, #toggleVoiceBtn {            background: #2196f3; /* 统一按钮颜色 */
+        #toggleCollapseBtn, #toggleVoiceBtn {
+            background: #2196f3; /* 统一按钮颜色 */
             color: white;
             border: none;
             padding: 4px 10px; /* 调小按钮内边距 */
@@ -95,13 +96,13 @@
         }
 
         #toggleCollapseBtn:hover, #toggleVoiceBtn.voice-enabled {
-            background: #2196f3; /* 语音开启时的绿色 */
+            background: #2196f3; /* 语音开启时的蓝色 */
         }
         #toggleVoiceBtn.voice-disabled {
             background: #f44336; /* 语音关闭时的红色 */
         }
         #toggleVoiceBtn:hover.voice-enabled {
-            background: #1976d2; /* 语音开启时的深绿色悬停效果 */
+            background: #1976d2; /* 语音开启时的深蓝色悬停效果 */
         }
         #toggleVoiceBtn:hover.voice-disabled {
             background: #d32f2f; /* 语音关闭时的深红色悬停效果 */
@@ -117,11 +118,10 @@
 
         #monitorTitle {
             margin: 0;
-            font-size: 16px; /* 更大的标题字体 */
             display: flex;
             align-items: center;
             color: #212121; /* 更暗的标题颜色 */
-            font-size: 12px; // 调小标题字体大小
+            font-size: 12px; /* 调小标题字体大小 */
         }
 
         .collapse-icon {
@@ -157,7 +157,8 @@
             AFTERNOON: { START: 13.5, END: 18 }
         }
     };
-    var loginout = 0;
+    let offlineNotifyCount = 0;
+    let lastOfflineStatus = false; // 记录上次的离线状态
     // 工具函数：获取当前小时（支持小数）
     function getCurrentHour() {
         const now = new Date();
@@ -204,16 +205,40 @@
 
             // 检查离线状态
             const offlineElement = document.querySelector('.t-dialog__body__icon:nth-child(2)');
-            if (offlineElement && offlineElement.textContent.trim().includes('离线')) {
-                if (loginout < 5) {
-                    loginout = loginout + 1;
-                    addLog('征纳互动已离线', 'warning');
+            const isCurrentlyOffline = offlineElement && offlineElement.textContent.trim().includes('离线');
+
+            if (isCurrentlyOffline) {
+                // 系统当前离线
+                if (!lastOfflineStatus) {
+                    // 刚刚从在线变为离线
+                    offlineNotifyCount = 1; // 直接设置为1，表示第一次提醒
+                    addLog('检测到系统刚刚离线 (第1次提醒)', 'warning');
                     speak("征纳互动已离线");
                 } else {
-                    addLog('离线：当前已通知5次，等待归零', 'warning');
+                    // 持续离线状态
+                    if (offlineNotifyCount < 5) {
+                        offlineNotifyCount++;
+                        addLog(`征纳互动已离线 (第${offlineNotifyCount}次提醒)`, 'warning');
+                        speak("征纳互动已离线");
+                    } else if (offlineNotifyCount === 5) {
+                        // 第一次达到5次通知限制时，记录暂停提醒的日志
+                        addLog('离线：已通知5次，暂停语音提醒', 'warning');
+                        offlineNotifyCount++; // 增加计数，避免重复记录此日志
+                    } else {
+                        // 超过5次后，静默计数，不记录日志也不语音提醒
+                        offlineNotifyCount++;
+                    }
                 }
+                lastOfflineStatus = true;
             } else {
-                addLog("未离线", "success")
+                // 系统当前在线
+                if (lastOfflineStatus) {
+                    // 刚刚从离线变为在线
+                    addLog('系统已重新上线', 'success');
+                    speak("征纳互动已重新上线");
+                    offlineNotifyCount = 0; // 重置计数器
+                }
+                lastOfflineStatus = false;
             }
         } catch (error) {
             addLog(`检测错误: ${error.message}`, 'warning');
