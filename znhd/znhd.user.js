@@ -1,450 +1,552 @@
 // ==UserScript==
-// @name         征纳互动人数和在线监控
-// @namespace    http://tampermonkey.net/
-// @version      25.7.22
-// @description  监控征纳互动等待人数变化，是否离线，并进行语音提示，带折叠面板
-// @author       runos
-// @match        https://znhd.hunan.chinatax.gov.cn:8443/*
-// @icon         data:image/png;base64,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
-// @grant        GM_addStyle
-// @grant        unsafeWindow
-// @homepage     https://scriptcat.org/zh-CN/script-show-page/3650
-// @license      MIT
+// @name        ceshi脚本猫UI库测试
+// @namespace   https://scriptcat.org/
+// @description 基于Arco做的UI库, 用于快速开发脚本的UI界面
+// @version     25.12.06-1
+// @author      Runos
+// @match       https://www.52pojie.cn/*
+// @icon        https://znhd.hunan.chinatax.gov.cn:8443/favicon.ico
+// @grant       GM_addStyle
+// @grant       unsafeWindow
+// @grant       GM_xmlhttpRequest
+// @require     https://scriptcat.org/lib/1167/1.0.0/%E8%84%9A%E6%9C%AC%E7%8C%ABUI%E5%BA%93.js  // 引入脚本猫UI库
+// @require     https://scriptcat.org/lib/946/1.0.2/PushCat.js?sha384-oSlgx/WB23lLz4OArRxG+kpIkZnfokQmTboHl4CT/yG38oxllL9+O+bo7K2Icrja
+// @require     https://scriptcat.org/lib/4521/1.0.2/WebDAVClient.js?sha384-tB6ti4GhpFScW10JSgHEfmZjNRQcX6B+u5oAUnwiTi3oxmTCMCF+ffVl9hF/a4fP
 // ==/UserScript==
 
-(function () {
-    'use strict';
+// 暴露变量到全局，方便在浏览器控制台调试
+// 使用安全的命名空间，避免全局污染
+const ScriptCatMonitor = {
+    CAT_UI: CAT_UI,
+    React: React,
+    ReactDOM: ReactDOM,
+    jsxLoader: jsxLoader,
+    addLog: addLog
+};
+// 仅在开发环境下暴露到全局
+if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    (window.unsafeWindow || window).ScriptCatMonitor = ScriptCatMonitor;
+}
 
-    // 添加自定义样式
-    GM_addStyle(`
-        #monitorLogContainer {
-            position: fixed;
-            top: 10px; /* 减小 top 值，将面板向上移动 */
-            right: 500px;
-            width: 300px;
-            background: #ffffff; /* 更纯净的白色背景 */
-            border: none; /* 移除边框 */
-            border-radius: 12px; /* 更大的圆角 */
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1); /* 更柔和的阴影 */
-            z-index: 9999;
-            font-family: 'Segoe UI', Roboto, sans-serif; /* 更现代的字体 */
-            max-height: 250px;
-            overflow: hidden;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); /* 更顺滑的过渡效果 */
-        }
-
-        #monitorLogContainer.collapsed {
-            max-height: none; /* 移除最大高度限制，仅折叠日志部分 */
-            overflow: hidden;
-        }
-
-        #monitorLogHeader {
-            background-color: #f5f5f5; /* 更柔和的头部背景色 */
-            padding: 10px; /* 调小头部内边距 */
-            border-bottom: none; /* 移除边框 */
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            cursor: pointer;
-            border-top-left-radius: 12px;
-            border-top-right-radius: 12px;
-            font-size: 12px; /* 调小头部字体大小 */
-        }
-
-        #monitorLogs {
-            padding: 16px;
-            font-size: 14px; /* 更大的字体 */
-            max-height: 200px;
-            overflow-y: auto;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); /* 更顺滑的过渡效果 */
-        }
-
-        #monitorLogContainer.collapsed #monitorLogs {
-            display: none;
-        }
-
-        .log-item {
-            padding: 8px 0;
-            border-bottom: 1px solid #eeeeee; /* 更柔和的分割线 */
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .log-warning {
-            color: #ff9800; /* 更鲜明的警告色 */
-        }
-
-        .log-info {
-            color: #2196f3; /* 更鲜明的信息色 */
-        }
-
-        .log-success {
-            color: #4caf50; /* 更鲜明的成功色 */
-        }
-
-        #toggleCollapseBtn, #toggleVoiceBtn {
-            background: #2196f3; /* 统一按钮颜色 */
-            color: white;
-            border: none;
-            padding: 4px 10px; /* 调小按钮内边距 */
-            border-radius: 8px; /* 按钮圆角 */
-            cursor: pointer;
-            font-size: 14px;
-            margin-left: 8px;
-            transition: background 0.2s;
-        }
-
-        #toggleCollapseBtn:hover, #toggleVoiceBtn.voice-enabled {
-            background: #2196f3; /* 语音开启时的蓝色 */
-        }
-        #toggleVoiceBtn.voice-disabled {
-            background: #f44336; /* 语音关闭时的红色 */
-        }
-        #toggleVoiceBtn:hover.voice-enabled {
-            background: #1976d2; /* 语音开启时的深蓝色悬停效果 */
-        }
-        #toggleVoiceBtn:hover.voice-disabled {
-            background: #d32f2f; /* 语音关闭时的深红色悬停效果 */
-        }
-
-        #toggleCollapseBtn {
-            background: #9e9e9e; /* 折叠按钮颜色 */
-        }
-
-        #toggleCollapseBtn:hover {
-            background: #757575; /* 折叠按钮悬停颜色 */
-        }
-
-        #monitorTitle {
-            margin: 0;
-            display: flex;
-            align-items: center;
-            color: #212121; /* 更暗的标题颜色 */
-            font-size: 12px; /* 调小标题字体大小 */
-        }
-
-        .collapse-icon {
-            margin-right: 12px;
-            font-size: 16px; /* 更大的图标 */
-            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        #monitorLogContainer.collapsed .collapse-icon {
-            transform: rotate(-90deg);
-        }
-
-        .control-buttons {
-            display: flex;
-        }
-    `);
-
-    // 语音播报开关 (true: 开启语音, false: 静音)
-    let voiceEnabled = true;
-    // 面板折叠状态
-    let panelCollapsed = false;
-    // 存储日志条目
-    const logEntries = [];
-
-    // 配置对象，集中管理可配置项
-    const CONFIG = {
-        // 检查间隔（毫秒）
-        CHECK_INTERVAL: 3000,
-        // 最大日志条目数
-        MAX_LOG_ENTRIES: 5,
-        WORKING_HOURS: {
-            MORNING: { START: 9, END: 12 },
-            AFTERNOON: { START: 13.5, END: 18 }
-        }
-    };
-    let offlineNotifyCount = 0;
-    let lastOfflineStatus = false; // 记录上次的离线状态
-    // 工具函数：获取当前小时（支持小数）
-    function getCurrentHour() {
-        const now = new Date();
-        return now.getHours() + now.getMinutes() / 60;
+// ==========配置==========
+// 配置对象，集中管理可配置项
+const CONFIG = {
+    // 检查间隔（毫秒）
+    CHECK_INTERVAL: 3000,
+    // 最大日志条目数
+    MAX_LOG_ENTRIES: 5,
+    WORKING_HOURS: {
+        MORNING: { START: 9, END: 12 },
+        AFTERNOON: { START: 13.5, END: 18 }
     }
+};
 
-    // 检查是否在工作时间内
-    function isWorkingHours() {
-        const currentHour = getCurrentHour();
-        return (currentHour >= CONFIG.WORKING_HOURS.MORNING.START && currentHour <= CONFIG.WORKING_HOURS.MORNING.END) ||
-            (currentHour >= CONFIG.WORKING_HOURS.AFTERNOON.START && currentHour <= CONFIG.WORKING_HOURS.AFTERNOON.END);
-    }
 
-    // 修改主要检测函数
-    function checkCount() {
-        if (!isWorkingHours()) {
-            addLog('当前不在工作时间，已停止脚本', 'warning');
-            return;
-        }
-        try {
-            // 获取等待人数
-            const ocurrentElement = document.querySelector('.count:nth-child(2)');
-            if (!ocurrentElement) {
-                addLog('找不到人数元素', 'warning');
-                speak("找不到人数元素");
-                return;
+// ==========日志管理==========
+// 全局日志状态管理
+let setLogEntriesCallback = null;
+
+// 添加日志条目函数
+function addLog(message, type = 'info', logenabled = false) {
+    const timestamp = new Date().toTimeString().slice(0, 8);
+    const logItem = { timestamp, message, type };
+
+    // 更新React状态
+    if (setLogEntriesCallback) {
+        setLogEntriesCallback(prevEntries => {
+            const newEntries = [logItem, ...prevEntries];
+            if (newEntries.length > CONFIG.MAX_LOG_ENTRIES) {
+                newEntries.pop();
             }
-
-            const currentCount = parseInt(ocurrentElement.textContent.trim());
-            // 检查currentCount是否为有效数字
-            if (isNaN(currentCount)) {
-                addLog('无法解析等待人数', 'warning');
-                speak("无法解析等待人数");
-                return;
-            }
-
-            if (currentCount === 0) {
-                addLog('当前等待人数为0', 'success');
-            } else if (currentCount < 5) {
-                // 使用具体数字替代length比较
-                addLog(`当前等待人数: ${currentCount}`, 'info');
-                speak("征纳互动有人来了");
-            }
-
-            // 检查离线状态
-            const offlineElement = document.querySelector('.t-dialog__body__icon:nth-child(2)');
-            const isCurrentlyOffline = offlineElement && offlineElement.textContent.trim().includes('离线');
-
-            if (isCurrentlyOffline) {
-                // 系统当前离线
-                if (!lastOfflineStatus) {
-                    // 刚刚从在线变为离线
-                    offlineNotifyCount = 1; // 直接设置为1，表示第一次提醒
-                    addLog('检测到系统刚刚离线 (第1次提醒)', 'warning');
-                    speak("征纳互动已离线");
-                } else {
-                    // 持续离线状态
-                    if (offlineNotifyCount < 5) {
-                        offlineNotifyCount++;
-                        addLog(`征纳互动已离线 (第${offlineNotifyCount}次提醒)`, 'warning');
-                        speak("征纳互动已离线");
-                    } else if (offlineNotifyCount === 5) {
-                        // 第一次达到5次通知限制时，记录暂停提醒的日志
-                        addLog('离线：已通知5次，暂停语音提醒', 'warning');
-                        offlineNotifyCount++; // 增加计数，避免重复记录此日志
-                    } else {
-                        // 超过5次后，静默计数，不记录日志也不语音提醒
-                        offlineNotifyCount++;
-                    }
-                }
-                lastOfflineStatus = true;
-            } else {
-                // 系统当前在线
-                if (lastOfflineStatus) {
-                    // 刚刚从离线变为在线
-                    addLog('系统已重新上线', 'success');
-                    speak("征纳互动已重新上线");
-                    offlineNotifyCount = 0; // 重置计数器
-                }
-                lastOfflineStatus = false;
-            }
-        } catch (error) {
-            addLog(`检测错误: ${error.message}`, 'warning');
-        }
+            return newEntries;
+        });
     }
-
-    const speechQueue = [];
-    let isSpeaking = false;
-    let voicesReady = false;
-
-    // 确保语音加载完成
-    speechSynthesis.onvoiceschanged = () => {
-        voicesReady = !!speechSynthesis.getVoices().length;
-    };
-
-    let firstSpeak = true;
-
-    function speak(text) {
-        if (firstSpeak && !voicesReady) {
-            const checkVoices = () => {
-                if (voicesReady) {
-                    firstSpeak = false;
-                    addLog('语音首次加载完成，可以开始播报。', 'info');
-                    speak(text);
-                } else {
-                    setTimeout(checkVoices, 100);
-                    addLog("等待语音加载完成", "info");
-                }
-            };
-            checkVoices();
-            return;
-        }
-        if (!voiceEnabled || !('speechSynthesis' in window) || !voicesReady) return;
-
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = 'zh-CN';
-        utterance.rate = 1.0;
-
-        speechQueue.push(utterance);
-        processSpeechQueue();
-    }
-
-    function processSpeechQueue() {
-        if (isSpeaking || speechQueue.length === 0 || !voiceEnabled) return;
-
-        isSpeaking = true;
-        const utterance = speechQueue.shift();
-
-        utterance.onend = utterance.onerror = (e) => {
-            isSpeaking = false;
-            processSpeechQueue();
-        };
-
-        window.speechSynthesis.speak(utterance);
-    }
-
-    // 添加日志条目
-    function addLog(message, type = 'info') {
-        const timestamp = new Date().toTimeString().slice(0, 8);
-        const logItem = { timestamp, message, type };
-
-        logEntries.unshift(logItem);
-        if (logEntries.length > CONFIG.MAX_LOG_ENTRIES) {
-            logEntries.pop();
-        }
-
-        updateLogDisplay();
+    if (logenabled) {
         console.log(`[监控] ${timestamp} ${message}`);
     }
+}
 
-    // 更新日志显示（使用文档片段优化性能）
-    function updateLogDisplay() {
-        const logContainer = document.getElementById('monitorLogs');
-        if (!logContainer) return;
 
-        const fragment = document.createDocumentFragment();
-        logEntries.forEach(log => {
-            const logElement = document.createElement('div');
-            logElement.className = `log-item log-${log.type}`;
-            logElement.innerHTML = `<strong>${log.timestamp}</strong> - ${log.message}`;
-            fragment.appendChild(logElement);
-        });
 
-        logContainer.innerHTML = '';
-        logContainer.appendChild(fragment);
-    }
+// ==========存储管理==========
+// 存储键名
+const STORAGE_KEY = 'scriptCat_Allvalue';
 
-    // 切换面板折叠状态
-    function togglePanel() {
-        const container = document.getElementById('monitorLogContainer');
-        if (!container) return;
-
-        panelCollapsed = !panelCollapsed;
-
-        if (panelCollapsed) {
-            container.classList.add('collapsed');
-        } else {
-            container.classList.remove('collapsed');
+// 从localStorage加载Allvalue数据
+function loadAllvalue() {
+    try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+            const parsed = JSON.parse(saved);
+            return {
+                voiceEnabled: parsed.voiceEnabled !== false, // 默认为true
+                getWebTextRunStatus: parsed.getWebTextRunStatus !== false, // 默认为true
+                webdavurl: parsed.webdavurl || "https://dav.jianguoyun.com/dav/",
+                webdavemail: parsed.webdavemail || "",
+                webdavpassword: parsed.webdavpassword || "",
+                webdavpath: parsed.webdavpath || "",
+            };
         }
 
-        // 更新折叠按钮文本
-        const collapseBtn = document.getElementById('toggleCollapseBtn');
-        if (collapseBtn) {
-            collapseBtn.textContent = panelCollapsed ? '展开面板' : '折叠面板';
-        }
+    } catch (error) {
+        console.error('加载存储数据失败:', error);
     }
+}
 
-    // 创建控制面板
-    function createControlPanel() {
-        const panel = document.createElement('div');
-        panel.id = 'monitorLogContainer';
+// 保存Allvalue数据到localStorage
+function saveAllvalue(data) {
+    try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        console.log('数据已保存到localStorage');
+    } catch (error) {
+        console.error('保存数据失败:', error);
+        CAT_UI.Message.error('保存设置失败: ' + error.message);
+    }
+}
 
-        // 面板头部
-        const header = document.createElement('div');
-        header.id = 'monitorLogHeader';
+// ==========UI部分==========
+// 抽屉/模态框组件示例
+function DM() {
+    // 使用加载的数据初始化Allvalue
+    const [Allvalue, setAllvalue] = CAT_UI.useState(loadAllvalue());
 
-        // 标题区域（可点击折叠）
-        const titleArea = document.createElement('div');
-        titleArea.style.display = 'flex';
-        titleArea.style.alignItems = 'center';
+    // 包装setAllvalue函数，实现自动保存
+    const updateAllvalue = (newValue) => {
+        setAllvalue(newValue);
+        // 自动保存到localStorage
+        saveAllvalue(newValue);
+    };
 
-        const title = document.createElement('h4');
-        title.id = 'monitorTitle';
-        title.innerHTML = '<span class="collapse-icon">▼</span> 征纳互动监控';
-        titleArea.appendChild(title);
+    // 解构状态变量，方便后续使用
+    const { voiceEnabled, getWebTextRunStatus, webdavurl, webdavemail, webdavpassword, webdavpath } = Allvalue;
 
-        header.appendChild(titleArea);
+    const voiceEnabledText = voiceEnabled ? "🔊 语音" : "🔇 静音";
+    const getWebTextRunStatusText = getWebTextRunStatus ? "▶️ 运行中" : "⏸️ 已停止";
 
-        // 按钮容器
-        const btnContainer = document.createElement('div');
-        btnContainer.className = 'control-buttons';
+    // 抽屉显示状态管理
+    const [visible, setVisible] = CAT_UI.useState(false);
+    // 日志条目状态管理
+    const [logEntries, setLogEntries] = CAT_UI.useState([]);
 
-        // 语音开关
-        const toggleBtn = document.createElement('button');
-        toggleBtn.id = 'toggleVoiceBtn';
-        toggleBtn.textContent = voiceEnabled ? '🔊 语音' : '🔇 静音';
-        toggleBtn.className = voiceEnabled ? 'voice-enabled' : 'voice-disabled';
-        toggleBtn.title = voiceEnabled ? '关闭语音提示' : '开启语音提示';
-        toggleBtn.onclick = (e) => {
-            e.stopPropagation(); // 阻止冒泡，避免触发折叠
-            voiceEnabled = !voiceEnabled;
-
-            // 如果禁用语音，立即停止当前播放的语音并清空队列
-            if (!voiceEnabled) {
-                window.speechSynthesis.cancel();
-                speechQueue.length = 0;
-                isSpeaking = false;
-            }
-
-            toggleBtn.textContent = voiceEnabled ? '🔊 语音' : '🔇 静音';
-            toggleBtn.className = voiceEnabled ? 'voice-enabled' : 'voice-disabled';
-            toggleBtn.title = voiceEnabled ? '关闭语音提示' : '开启语音提示';
-            addLog(`语音功能已${voiceEnabled ? '启用' : '禁用'}`);
+    // 设置日志回调函数
+    CAT_UI.useEffect(() => {
+        setLogEntriesCallback = setLogEntries;
+        return () => {
+            setLogEntriesCallback = null;
         };
-        btnContainer.appendChild(toggleBtn);
+    }, []);
 
-        // 折叠按钮
-        const collapseBtn = document.createElement('button');
-        collapseBtn.id = 'toggleCollapseBtn';
-        collapseBtn.textContent = '折叠面板';
-        collapseBtn.title = '折叠/展开控制面板';
-        collapseBtn.onclick = (e) => {
-            e.stopPropagation(); // 阻止冒泡，避免触发折叠
-            togglePanel();
-        };
-        btnContainer.appendChild(collapseBtn);
+    return CAT_UI.Space(
+        [
+            // 水平排列按钮和抽屉
+            // 打开抽屉按钮
+            CAT_UI.Space(
+                [
+                    CAT_UI.Text("webhook运行状态: "),
+                    CAT_UI.Button(getWebTextRunStatusText, {
+                        type: "primary",
+                        onClick() {
+                            const newGetWebTextRunStatus = !getWebTextRunStatus;
+                            updateAllvalue({ ...Allvalue, getWebTextRunStatus: newGetWebTextRunStatus });
+                        },
+                        style: {
+                            backgroundColor: getWebTextRunStatusText === "⏸️ 已停止" ? "#ff4d4f" : undefined,
+                            borderColor: getWebTextRunStatusText === "⏸️ 已停止" ? "#ff4d4f" : undefined,
+                            ":hover": {
+                                backgroundColor: getWebTextRunStatusText === "⏸️ 已停止" ? "#f5222d" : undefined,
+                                borderColor: getWebTextRunStatusText === "⏸️ 已停止" ? "#f5222d" : undefined
+                            }
+                        }
+                    }),
+                ],
+                {
+                    direction: "horizontal", // 横向排列（默认值，可省略）
+                    size: "middle", // 元素间间距（可选：small/middle/large，默认middle）
+                    style: { marginBottom: "8px" } // 可选：给这一行加底部间距，避免与下方元素拥挤
+                }
+            ),
+            CAT_UI.Space(
+                [
+                    CAT_UI.Button("设置", {
+                        type: "primary",
+                        onClick: () => setVisible(true),  // 显示抽屉
+                    }),
+
+                    CAT_UI.Button(voiceEnabledText, {
+                        type: "primary",
+                        onClick: () => {
+                            const newVoiceEnabled = !voiceEnabled;
+                            updateAllvalue({ ...Allvalue, voiceEnabled: newVoiceEnabled });  // 更新状态，触发重新渲染
+
+                            // 启用语音时，初始化语音合成（解决浏览器not-allowed限制）
+                            if (newVoiceEnabled && 'speechSynthesis' in window) {
+                                // 播放一个静默语音来激活语音功能
+                                const testUtterance = new SpeechSynthesisUtterance('');
+                                window.speechSynthesis.speak(testUtterance);
+                                CAT_UI.Message.success('语音功能已启用');
+                            }
+                        },
+                        // 动态样式：根据静音状态切换颜色
+                        style: {
+                            // 静音时用红色，非静音时用primary默认蓝色（无需额外设置）
+                            backgroundColor: voiceEnabledText === "🔇 静音" ? "#ff4d4f" : undefined,
+                            borderColor: voiceEnabledText === "🔇 静音" ? "#ff4d4f" : undefined,
+                            // 优化hover效果：静音状态下hover时颜色加深（符合视觉交互逻辑）
+                            ":hover": {
+                                backgroundColor: voiceEnabledText === "🔇 静音" ? "#f5222d" : undefined,
+                                borderColor: voiceEnabledText === "🔇 静音" ? "#f5222d" : undefined
+                            }
+                        }
+                    }),
+
+                    // 抽屉组件
+                    CAT_UI.Drawer(
+                        // 抽屉内容
+                        CAT_UI.createElement("div", { style: { textAlign: "left" } }, [
+                            CAT_UI.Divider("webdav设置"),  // 带文本的分隔线
+                            CAT_UI.createElement(
+                                "div",
+                                {
+                                    style: {
+                                        display: "flex",          // 弹性布局
+                                        justifyContent: "space-between",  // 水平方向两端对齐
+                                        alignItems: "center",     // 垂直方向居中对齐
+                                    },
+                                },
+                                [   // 子元素数组
+                                    CAT_UI.Text("Url："),  // 文本提示
+                                    CAT_UI.Input({          // 输入框
+                                        value: webdavurl,
+                                        onChange(val) {
+                                            updateAllvalue({ ...Allvalue, webdavurl: val });
+                                        },
+                                        style: { flex: 1, marginBottom: "8px" }   // 占满剩余空间并加底部间距
+                                    }),
+                                ]
+                            ),
+                            CAT_UI.createElement(
+                                "div",
+                                {
+                                    style: {
+                                        display: "flex",
+                                        justifyContent: "space-between",
+                                        alignItems: "center",
+                                    },
+                                },
+                                [
+                                    CAT_UI.Text("email："),
+                                    CAT_UI.Input({
+                                        value: webdavemail,
+                                        onChange(val) {
+                                            updateAllvalue({ ...Allvalue, webdavemail: val });
+                                        },
+                                        style: { flex: 1, marginBottom: "8px" }   // 占满剩余空间并加底部间距
+                                    }),
+                                ]
+                            ),
+                            CAT_UI.createElement(
+                                "div",
+                                {
+                                    style: {
+                                        display: "flex",
+                                        justifyContent: "space-between",
+                                        alignItems: "center",
+                                    },
+                                },
+                                [
+                                    CAT_UI.Text("pw："),
+                                    CAT_UI.Input({
+                                        value: webdavpassword,
+                                        type: "password",
+                                        onChange(val) {
+                                            updateAllvalue({ ...Allvalue, webdavpassword: val });
+                                        },
+                                        style: { flex: 1, marginBottom: "8px" }   // 占满剩余空间并加底部间距
+                                    }),
+                                ]
+                            ),
+                            CAT_UI.createElement(
+                                "div",
+                                {
+                                    style: {
+                                        display: "flex",
+                                        justifyContent: "space-between",
+                                        alignItems: "center",
+                                    },
+                                },
+                                [
+                                    CAT_UI.Text("path："),
+                                    CAT_UI.Input({
+                                        value: webdavpath,
+                                        onChange(val) {
+                                            updateAllvalue({ ...Allvalue, webdavpath: val });
+                                        }
+                                        ,
+                                        style: { flex: 1, marginBottom: "8px" }   // 占满剩余空间并加底部间距
+                                    }),
+                                ]
+                            ),
+
+                            CAT_UI.Divider("其他设置"),  // 带文本的分隔线
+                            CAT_UI.Text("脚本猫的UI框架: " + webdavurl),
+                            CAT_UI.Button("我是按钮", {
+                                type: "primary",
+                                onClick() {
+                                    CAT_UI.Message.info("我被点击了,你输入了: " + webdavurl);
+                                },
+                            }),
+                            // 日志显示区域
+                            CAT_UI.Divider("日志内容"),  // 日志标题分隔线
+                            CAT_UI.createElement(
+                                "pre",
+                                {
+                                    style: {
+                                        whiteSpace: "pre-wrap",
+                                        wordBreak: "break-word",
+                                        maxHeight: "300px",
+                                        overflowY: "auto",
+                                        backgroundColor: "#f5f5f5",
+                                        padding: "10px",
+                                        borderRadius: "4px"
+                                    }
+                                },
+                                logEntries.map(entry => `${entry.timestamp} - ${entry.message}`).join("\n")
+                            ),
+                        ]),
+                        {
+                            title: "设置菜单",  // 抽屉标题
+                            visible,  // 控制显示/隐藏
+                            width: 400,  // 抽屉宽度（像素）
+                            focusLock: true,  // 聚焦锁定
+                            autoFocus: true,  // 自动聚焦
+                            zIndex: 10000,  // 层级
+                            onOk: () => { setVisible(false); },  // 确定按钮回调
+                            onCancel: () => { setVisible(false); },  // 取消按钮回调
+                        }
+                    )
+                ],
+                {
+                    direction: "horizontal", // 横向排列（默认值，可省略）
+                    size: "middle", // 元素间间距（可选：small/middle/large，默认middle）
+                    style: { marginBottom: "8px" } // 可选：给这一行加底部间距，避免与下方元素拥挤
+                }
+            ),
+            [
+                CAT_UI.Text("脚本猫的UI框架: " + (voiceEnabled ? "语音开启" : "语音关闭")),
+                CAT_UI.Button("常用语", {
+                    type: "primary",
+                    onClick() {
+                        (async () => {
+                            try {
+                                // 从localStorage重新读取最新的数据，确保获得最新值
+                                const currentData = loadAllvalue();
+                                const { webdavurl: url, webdavemail: email, webdavpassword: password, webdavpath: path } = currentData;
+
+                                addLog('WebDAV参数 - URL: ' + url + ', Email: ' + email + ', Path: ' + path, 'info', true);
+
+                                const client = new WebDAVClient({
+                                    url: url,
+                                    username: email,
+                                    password: password // 不要把密码硬编码
+                                });
+
+                                const isexists = await client.exists(path);
+                                if (!isexists) {
+                                    addLog('文件不存在', 'info', true);
+                                    addLog("文件链接：" + url + path, 'info', true);
+                                } else {
+                                    addLog('文件已存在', 'info', true);
+                                    // 读文件
+                                    const text = await client.getFileContents(path);
+                                    addLog('读取文件内容: ' + text, 'info', true);
+                                }
+                            } catch (err) {
+                                addLog('WebDAV 操作出错: ' + err.message, 'warning', true);
+                            }
+                        })();
+                    },
+                }),
+            ]
+        ],
+        {
+            direction: "vertical",
+        }
+    );
+}
+
+CAT_UI.createPanel({
+    // 强制固定Drawer和Panel位置
+    appendStyle: `.arco-drawer-wrapper {
+    position: fixed !important;
+  }
+  .scriptcat-panel {
+    position: fixed !important;
+  }`,
+    header: {
+        title: CAT_UI.Space(
+            [
+                CAT_UI.Icon.ScriptCat({
+                    style: { width: "24px", verticalAlign: "middle" },
+                    draggable: "false",
+                }),
+                CAT_UI.Text("征纳互动监控", {
+                    style: { fontSize: "16px" },
+                }),
+            ],
+            { style: { marginLeft: "5px" } }
+        ),
+        style: {
+            borderBottom: "1px solid var(--color-neutral-3)"
+        },
+    },
+    render: DM,
+
+    // 面板初始位置
+    point: {
+        x: window.screen.width - 500,  // 距离右侧400px
+        y: 20  // 距离顶部20px
+    },
+
+});
 
 
 
-        header.appendChild(btnContainer);
-        panel.appendChild(header);
 
-        // 日志内容区域
-        const logContent = document.createElement('div');
-        logContent.id = 'monitorLogs';
-        logContent.innerHTML = '<div class="log-item log-info">监控启动...</div>';
-        panel.appendChild(logContent);
 
-        document.body.appendChild(panel);
 
-        // 添加点击折叠功能（点击标题栏可折叠）
-        header.addEventListener('click', togglePanel);
 
-        // 初始添加一条日志
-        addLog('监控已启动');
+// ==========监控部分==========
+// 工具函数：获取当前小时（支持小数）
+function getCurrentHour() {
+    const now = new Date();
+    return now.getHours() + now.getMinutes() / 60;
+}
+
+// 检查是否在工作时间内
+function isWorkingHours() {
+    const currentHour = getCurrentHour();
+    return (currentHour >= CONFIG.WORKING_HOURS.MORNING.START && currentHour <= CONFIG.WORKING_HOURS.MORNING.END) ||
+        (currentHour >= CONFIG.WORKING_HOURS.AFTERNOON.START && currentHour <= CONFIG.WORKING_HOURS.AFTERNOON.END);
+}
+
+// 缓存DOM元素引用
+const domCache = {
+    ocurrentElement: null,
+    offlineElement: null
+};
+
+// 修改主要检测函数
+function checkCount() {
+    if (!isWorkingHours()) {
+        addLog('当前不在工作时间，已停止脚本', 'warning');
+        return;
     }
-
-    // 初始化监控
-    function initMonitor() {
-        createControlPanel();
-
-        // 只在工作时间内播放启动语音
-        if (isWorkingHours()) {
-            speak("监控启动");
-        } else {
-            addLog('当前不在工作时间，监控已启动但暂停语音提示', 'warning');
+    try {
+        // 获取等待人数 - 使用更灵活的选择器
+        if (!domCache.ocurrentElement) {
+            // 尝试多种选择器来找到人数元素
+            domCache.ocurrentElement = document.querySelector('.count:nth-child(2)')
         }
 
-        // 每3秒检查一次
-        setInterval(checkCount, 3000);
-    }
+        const ocurrentElement = domCache.ocurrentElement;
+        if (!ocurrentElement) {
+            addLog('找不到人数元素', 'warning');
+            //speak("找不到人数元素");
+            return;
+        }
 
-    // 页面加载完成后启动监控
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initMonitor);
-    } else {
-        initMonitor();
+        const currentCount = parseInt(ocurrentElement.textContent.trim());
+        // 检查currentCount是否为有效数字
+        if (isNaN(currentCount)) {
+            addLog(`无法解析等待人数，元素内容: "${ocurrentElement.textContent.trim()}"`, 'warning');
+            return;
+        }
+
+        if (currentCount === 0) {
+            addLog('当前等待人数为0', 'success');
+        } else if (currentCount < 10) { // 使用具体数字替代length比较
+            addLog(`当前等待人数: ${currentCount}`, 'info');
+            speak("征纳互动有人来了");
+        }
+
+        // 检查离线状态 - 使用更灵活的选择器
+        if (!domCache.offlineElement) {
+            domCache.offlineElement = document.querySelector('.t-dialog__body__icon:nth-child(2)') ||
+                document.querySelector('.t-dialog__body__icon') ||
+                document.querySelector('[class*="dialog"][class*="icon"]');
+        }
+
+        const offlineElement = domCache.offlineElement;
+        if (offlineElement && offlineElement.textContent.trim().includes('离线')) {
+            addLog('征纳互动已离线', 'warning');
+            speak("征纳互动已离线");
+        }
+    } catch (error) {
+        addLog(`检测错误: ${error.message}`, 'warning');
     }
-})();
+}
+
+// 语音播报函数
+const speechQueue = [];
+let isSpeaking = false;
+
+function speak(text) {
+    // 从localStorage获取语音状态
+    const savedData = loadAllvalue();
+    const voiceEnabled = savedData.voiceEnabled;
+
+    if (!voiceEnabled || !('speechSynthesis' in window)) { return; }
+
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'zh-CN';
+    utterance.rate = 1.0;
+
+    // 添加到队列
+    speechQueue.push(utterance);
+    processSpeechQueue();
+}
+
+// 处理语音队列
+function processSpeechQueue() {
+    if (isSpeaking || speechQueue.length === 0) { return; }
+
+    isSpeaking = true;
+    const utterance = speechQueue.shift();
+
+    utterance.onend = () => {
+        isSpeaking = false;
+        processSpeechQueue();
+    };
+
+    utterance.onerror = (event) => {
+        isSpeaking = false;
+        // 如果是not-allowed错误，清空队列避免堆积
+        if (event.error === 'not-allowed') {
+            speechQueue.length = 0;
+        } else {
+            processSpeechQueue();
+        }
+    };
+
+    // 在播放前确保语音合成已恢复（某些浏览器会暂停）
+    if (window.speechSynthesis.paused) {
+        window.speechSynthesis.resume();
+    }
+    window.speechSynthesis.speak(utterance);
+}
+
+
+
+// 页面加载完成后启动监控
+function startMonitoring() {
+    // 立即执行一次检查
+    checkCount();
+    // 启动定时检查
+    setInterval(checkCount, CONFIG.CHECK_INTERVAL);
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', startMonitoring);
+} else {
+    startMonitoring();
+}
