@@ -1,14 +1,16 @@
 // ==UserScript==
-// @name        ceshi脚本猫UI库测试
+// @name        征纳互动人数和在线监控
 // @namespace   https://scriptcat.org/
 // @description 基于Arco做的UI库, 用于快速开发脚本的UI界面
 // @version     25.12.06-1
-// @author      Runos
+// @author      runos
+// @match       https://znhd.hunan.chinatax.gov.cn:8443/*
 // @match       https://www.52pojie.cn/*
 // @icon        https://znhd.hunan.chinatax.gov.cn:8443/favicon.ico
 // @grant       GM_addStyle
 // @grant       unsafeWindow
 // @grant       GM_xmlhttpRequest
+// @homepage    https://scriptcat.org/zh-CN/script-show-page/3650
 // @require     https://scriptcat.org/lib/1167/1.0.0/%E8%84%9A%E6%9C%AC%E7%8C%ABUI%E5%BA%93.js  // 引入脚本猫UI库
 // @require     https://scriptcat.org/lib/946/1.0.2/PushCat.js?sha384-oSlgx/WB23lLz4OArRxG+kpIkZnfokQmTboHl4CT/yG38oxllL9+O+bo7K2Icrja
 // @require     https://scriptcat.org/lib/4521/1.0.2/WebDAVClient.js?sha384-tB6ti4GhpFScW10JSgHEfmZjNRQcX6B+u5oAUnwiTi3oxmTCMCF+ffVl9hF/a4fP
