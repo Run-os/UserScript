@@ -2,7 +2,7 @@
 // @name        征纳互动人数和在线监控
 // @namespace   https://scriptcat.org/
 // @description 监控征纳互动等待人数和在线状态，支持语音播报和Gotify推送通知。详细配置请点击脚本猫面板中的设置按钮。详细说明见：
-// @version     25.12.07-2
+// @version     25.12.08 v2
 // @author      runos
 // @match       https://znhd.hunan.chinatax.gov.cn:8443/*
 // @match       https://example.com/?znhd
@@ -12,6 +12,8 @@
 // @grant       GM_xmlhttpRequest
 // @grant       GM_setClipboard
 // @connect     sct.icodef.com
+// @connect     file.122050.xyz
+// @connect     *
 // @grant       GM_notification
 // @homepage    https://scriptcat.org/zh-CN/script-show-page/3650
 // @require     https://scriptcat.org/lib/1167/1.0.0/%E8%84%9A%E6%9C%AC%E7%8C%ABUI%E5%BA%93.js  // 引入脚本猫UI库
@@ -68,9 +70,6 @@ function addLog(message, type = 'info', logenabled = false) {
     }
 }
 
-
-
-
 // ==========存储管理==========
 // 存储键名
 const STORAGE_KEY = 'scriptCat_Allvalue';
@@ -79,7 +78,7 @@ const DEFAULTS = {
     getPushStatus: true,
     pushUrl: "",
     pushToken: "",
-    commonPhraseUrl: "",
+    JsonUrl: "",
 };
 
 // 从localStorage加载Allvalue数据
@@ -124,15 +123,21 @@ function DM() {
     const patchAllvalue = (kv) => updateAllvalue({ ...Allvalue, ...kv });
 
     // 解构状态变量，方便后续使用
-    const { voiceEnabled, getPushStatus, pushUrl, pushToken, commonPhraseUrl } = Allvalue;
+    const { voiceEnabled, getPushStatus, pushUrl, pushToken, JsonUrl } = Allvalue;
 
     const voiceEnabledText = voiceEnabled ? "🔊 语音" : "🔇 静音";
     const getPushStatusText = getPushStatus ? "▶️ 运行中" : "⏸️ 已停止";
 
-    // 抽屉显示状态管理
+    // 设置抽屉显示状态管理
     const [visible, setVisible] = CAT_UI.useState(false);
+    // 常用语抽屉显示状态管理
+    const [commonPhrasesVisible, setCommonPhrasesVisible] = CAT_UI.useState(false);
     // 日志条目状态管理
     const [logEntries, setLogEntries] = CAT_UI.useState([]);
+    // 常用语数据状态管理
+    const [phrasesData, setPhrasesData] = CAT_UI.useState({});
+    // 常用语加载状态
+    const [phrasesLoading, setPhrasesLoading] = CAT_UI.useState(false);
 
     // 设置日志回调函数
     CAT_UI.useEffect(() => {
@@ -153,15 +158,55 @@ function DM() {
         }
     }, [getPushStatus, pushUrl, pushToken]);
 
+    // 加载常用语数据的函数
+    const loadPhrasesData = () => {
+        if (!JsonUrl) {
+            CAT_UI.Message.warning('请先配置 JsonUrl');
+            return;
+        }
 
+        setPhrasesLoading(true);
+        GM_xmlhttpRequest({
+            method: 'GET',
+            url: JsonUrl,
+            onload: function (response) {
+                try {
+                    const data = JSON.parse(response.responseText);
+                    setPhrasesData(data);
+                    CAT_UI.Message.success('常用语加载成功');
+                } catch (error) {
+                    console.error('JSON 解析失败:', error);
+                    CAT_UI.Message.error('JSON 解析失败: ' + error.message);
+                    setPhrasesData({});
+                } finally {
+                    setPhrasesLoading(false);
+                }
+            },
+            onerror: function (error) {
+                console.error('加载常用语失败:', error);
+                CAT_UI.Message.error('加载常用语失败');
+                setPhrasesLoading(false);
+                setPhrasesData({});
+            }
+        });
+    };
 
+    // 当 JsonUrl 变化时自动加载数据
+    CAT_UI.useEffect(() => {
+        if (JsonUrl) {
+            loadPhrasesData();
+        }
+    }, [JsonUrl]);
+
+    // 主UI布局
     return CAT_UI.Space(
         [
             // 水平排列按钮和抽屉
-            // 打开抽屉按钮
+
+            // webhook状态
             CAT_UI.Space(
                 [
-                    CAT_UI.Text("push运行状态: "),
+                    CAT_UI.Text("webhook运行状态: "),
                     CAT_UI.Button(getPushStatusText, {
                         type: "primary",
                         onClick() {
@@ -185,13 +230,11 @@ function DM() {
                     style: { marginBottom: "8px" } // 可选：给这一行加底部间距，避免与下方元素拥挤
                 }
             ),
+
+            // 语音播报状态
             CAT_UI.Space(
                 [
-                    CAT_UI.Button("设置", {
-                        type: "primary",
-                        onClick: () => setVisible(true),  // 显示抽屉
-                    }),
-
+                    CAT_UI.Text("语音播报状态: "),
                     CAT_UI.Button(voiceEnabledText, {
                         type: "primary",
                         onClick: () => {
@@ -218,24 +261,35 @@ function DM() {
                             }
                         }
                     }),
+                ]
+            ),
 
+            //设置抽屉
+            CAT_UI.Space(
+                [
+                    CAT_UI.Button("设置", {
+                        type: "primary",
+                        onClick: () => setVisible(true),  // 显示抽屉
+                    }),
                     // 抽屉组件
                     CAT_UI.Drawer(
                         // 抽屉内容
                         CAT_UI.createElement("div", { style: { textAlign: "left" } }, [
-                            CAT_UI.Input({          // 输入框
-                                value: "测试输入框",
-                                onChange(val) {
-                                },
-                                style: { flex: 1, marginBottom: "8px" }   // 占满剩余空间并加底部间距
-                            }),
+                            CAT_UI.Divider("使用说明"),
                             CAT_UI.createElement(
-                                "h3", {
-                                style: { marginBottom: "16px", textAlign: "left", whiteSpace: "pre-line" }
-                            },
-                                "使用说明:\n1. 配置好pushUrl和pushToken后，点击运行状态按钮启动Gotify推送监听\n2. 根据需要开启或关闭语音播报功能\n3. 日志区域会显示最近的监控日志，方便查看脚本运行状态\n4. 接收消息必须使用 clientToken（不是 appToken）",
+                                "p",
+                                {
+                                    style: {
+                                        marginBottom: "16px",
+                                        color: "#666",
+                                        lineHeight: "1.6",
+                                        textAlign: "left",
+                                        whiteSpace: "pre-line"
+                                    }
+                                },
+                                "1. 配置好pushUrl和pushToken（即clientToken）后，点击运行状态按钮启动Gotify推送监听\n2. 根据需要开启或关闭语音播报功能\n3. 日志区域会显示最近的监控日志",
                             ),
-                            CAT_UI.Divider("高级设置"),  // 带文本的分隔线
+                            CAT_UI.Divider("push设置"),  // 带文本的分隔线
                             CAT_UI.createElement(
                                 "div",
                                 {
@@ -276,35 +330,8 @@ function DM() {
                                     }),
                                 ]
                             ),
-                            CAT_UI.createElement(
-                                "div",
-                                {
-                                    style: {
-                                        display: "flex",
-                                        justifyContent: "space-between",
-                                        alignItems: "center",
-                                    },
-                                },
-                                [
-                                    CAT_UI.Text("commonPhraseUrl："),
-                                    CAT_UI.Input({
-                                        value: commonPhraseUrl,
-                                        onChange(val) {
-                                            patchAllvalue({ commonPhraseUrl: val });
-                                        },
-                                        style: { flex: 1, marginBottom: "8px" }   // 占满剩余空间并加底部间距
-                                    }),
-                                ]
-                            ),
 
                             CAT_UI.Divider("其他设置"),  // 带文本的分隔线
-                            CAT_UI.Text("脚本猫的UI框架: " + pushUrl),
-                            CAT_UI.Button("我是按钮", {
-                                type: "primary",
-                                onClick() {
-                                    CAT_UI.Message.info("我被点击了,你输入了: " + pushUrl);
-                                },
-                            }),
                             // 日志显示区域
                             CAT_UI.Divider("日志内容"),  // 日志标题分隔线
                             CAT_UI.createElement(
@@ -323,12 +350,13 @@ function DM() {
                                 logEntries.map(entry => `${entry.timestamp} - ${entry.message}`).join("\n")
                             ),
                         ]),
+                        // 抽屉属性
                         {
                             title: "设置菜单",  // 抽屉标题
                             visible,  // 控制显示/隐藏
                             width: 400,  // 抽屉宽度（像素）
                             focusLock: true,  // 聚焦锁定
-                            autoFocus: true,  // 自动聚焦
+                            autoFocus: false,  // 禁用自动聚焦
                             zIndex: 10000,  // 层级
                             onOk: () => { setVisible(false); },  // 确定按钮回调
                             onCancel: () => { setVisible(false); },  // 取消按钮回调
@@ -341,18 +369,102 @@ function DM() {
                     style: { marginBottom: "8px" } // 可选：给这一行加底部间距，避免与下方元素拥挤
                 }
             ),
-            [
-                CAT_UI.Button("常用语(未完成)", {
-                    type: "primary",
-                    onClick() {
 
-                    },
-                }),
-            ]
+            // 常用语按钮和抽屉
+            CAT_UI.Space(
+                [
+                    CAT_UI.Button("常用语", {
+                        type: "primary",
+                        onClick() {
+                            setCommonPhrasesVisible(true);
+                        },
+                    }),
+                    // 常用语抽屉组件
+                    CAT_UI.Drawer(
+                        // 抽屉内容
+                        CAT_UI.createElement("div", { style: { textAlign: "left" } }, [
+                            // JsonUrl 配置输入框
+                            CAT_UI.createElement(
+                                "div",
+                                {
+                                    style: {
+                                        display: "flex",          // 弹性布局
+                                        justifyContent: "space-between",  // 水平方向两端对齐
+                                        alignItems: "center",     // 垂直方向居中对齐
+                                        marginBottom: "16px"
+                                    },
+                                },
+                                [   // 子元素数组
+                                    CAT_UI.Text("JsonUrl:"),  // 文本提示
+                                    CAT_UI.Input({          // 输入框
+                                        value: JsonUrl,
+                                        onChange(val) {
+                                            patchAllvalue({ JsonUrl: val });
+                                        },
+                                        style: { flex: 1, marginLeft: "8px" }   // 占满剩余空间并加左边距
+                                    }),
+                                ]
+                            ),
+                            // 重新加载按钮
+                            CAT_UI.Button("重新加载常用语", {
+                                type: "primary",
+                                loading: phrasesLoading,
+                                onClick: loadPhrasesData,
+                                style: { marginBottom: "16px", width: "100%" }
+                            }),
+                            CAT_UI.Divider("使用说明"),
+                            CAT_UI.createElement(
+                                "p",
+                                {
+                                    style: {
+                                        marginBottom: "16px",
+                                        color: "#666",
+                                        lineHeight: "1.6",
+                                        textAlign: "left",
+                                        whiteSpace: "pre-line"
+                                    }
+                                },
+                                "JsonUrl 为一个 JSON 直链文件\nJSON 格式: {\"按钮文本\": \"复制内容\", ...}",
+                            ),
+                            CAT_UI.Divider("常用语列表"),
+                            // 动态生成常用语按钮
+                            phrasesLoading ?
+                                CAT_UI.createElement("div", { style: { textAlign: "center", padding: "20px" } }, "加载中...") :
+                                (Object.keys(phrasesData).length === 0 ?
+                                    CAT_UI.createElement("div", { style: { textAlign: "center", padding: "20px", color: "#999" } }, "暂无常用语数据，请配置 JsonUrl 并加载") :
+                                    CAT_UI.Space(
+                                        Object.entries(phrasesData).map(([key, value]) =>
+                                            CAT_UI.Button(key, {
+                                                type: "default",
+                                                onClick() {
+                                                    safeCopyText(value);
+                                                    CAT_UI.Message.success("已复制: " + key);
+                                                    setCommonPhrasesVisible(false);
+                                                },
+                                                style: { marginBottom: "8px", width: "100%" }
+                                            })
+                                        ),
+                                        { direction: "vertical", style: { width: "100%" } }
+                                    )
+                                ),
+                            CAT_UI.Divider(""),
+                        ]),
+                        // 抽屉属性
+                        {
+                            title: "常用语",
+                            visible: commonPhrasesVisible,
+                            width: 400,
+                            focusLock: true,
+                            autoFocus: false,
+                            zIndex: 10001,  // 比设置抽屉层级高一点
+                            onOk: () => { setCommonPhrasesVisible(false); },
+                            onCancel: () => { setCommonPhrasesVisible(false); },
+                        }
+                    )
+                ]
+            ),
         ],
-        {
-            direction: "vertical",
-        }
+        { direction: "vertical" }  // 垂直排列
     );
 }
 
@@ -390,9 +502,6 @@ CAT_UI.createPanel({
     },
 
 });
-
-
-
 
 
 
@@ -631,7 +740,7 @@ function connectGotifyWebSocket(pushUrl, pushToken) {
         console.error('[Gotify] WebSocket 错误:', error);
     };
     gotifyWS.onclose = (event) => {
-        CAT_UI.Message.info('Gotify WebSocket 连接关闭');
+        CAT_UI.Message.error('Gotify WebSocket 连接关闭');
         gotifyWS = null;
         if (!gotifyEnabled) { return; }
         if (gotifyReconnectTimer) clearTimeout(gotifyReconnectTimer);
