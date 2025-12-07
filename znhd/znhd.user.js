@@ -10,10 +10,11 @@
 // @grant       GM_addStyle
 // @grant       unsafeWindow
 // @grant       GM_xmlhttpRequest
+// @grant       GM_setClipboard
+// @connect     sct.icodef.com
+// @grant       GM_notification
 // @homepage    https://scriptcat.org/zh-CN/script-show-page/3650
 // @require     https://scriptcat.org/lib/1167/1.0.0/%E8%84%9A%E6%9C%AC%E7%8C%ABUI%E5%BA%93.js  // 引入脚本猫UI库
-// @require     https://scriptcat.org/lib/946/1.0.2/PushCat.js?sha384-oSlgx/WB23lLz4OArRxG+kpIkZnfokQmTboHl4CT/yG38oxllL9+O+bo7K2Icrja
-// @require     https://scriptcat.org/lib/4521/1.0.2/WebDAVClient.js?sha384-tB6ti4GhpFScW10JSgHEfmZjNRQcX6B+u5oAUnwiTi3oxmTCMCF+ffVl9hF/a4fP
 // ==/UserScript==
 
 // 暴露变量到全局，方便在浏览器控制台调试
@@ -43,7 +44,6 @@ const CONFIG = {
     }
 };
 
-
 // ==========日志管理==========
 // 全局日志状态管理
 let setLogEntriesCallback = null;
@@ -70,9 +70,17 @@ function addLog(message, type = 'info', logenabled = false) {
 
 
 
+
 // ==========存储管理==========
 // 存储键名
 const STORAGE_KEY = 'scriptCat_Allvalue';
+const DEFAULTS = {
+    voiceEnabled: true,
+    getPushStatus: true,
+    pushUrl: "",
+    pushToken: "",
+    commonPhraseUrl: "",
+};
 
 // 从localStorage加载Allvalue数据
 function loadAllvalue() {
@@ -80,19 +88,14 @@ function loadAllvalue() {
         const saved = localStorage.getItem(STORAGE_KEY);
         if (saved) {
             const parsed = JSON.parse(saved);
-            return {
-                voiceEnabled: parsed.voiceEnabled !== false, // 默认为true
-                getWebTextRunStatus: parsed.getWebTextRunStatus !== false, // 默认为true
-                webdavurl: parsed.webdavurl || "https://dav.jianguoyun.com/dav/",
-                webdavemail: parsed.webdavemail || "",
-                webdavpassword: parsed.webdavpassword || "",
-                webdavpath: parsed.webdavpath || "",
-            };
+            return { ...DEFAULTS, ...parsed };
         }
 
     } catch (error) {
         console.error('加载存储数据失败:', error);
     }
+    // 返回默认值
+    return { ...DEFAULTS };
 }
 
 // 保存Allvalue数据到localStorage
@@ -118,12 +121,13 @@ function DM() {
         // 自动保存到localStorage
         saveAllvalue(newValue);
     };
+    const patchAllvalue = (kv) => updateAllvalue({ ...Allvalue, ...kv });
 
     // 解构状态变量，方便后续使用
-    const { voiceEnabled, getWebTextRunStatus, webdavurl, webdavemail, webdavpassword, webdavpath } = Allvalue;
+    const { voiceEnabled, getPushStatus, pushUrl, pushToken, commonPhraseUrl } = Allvalue;
 
     const voiceEnabledText = voiceEnabled ? "🔊 语音" : "🔇 静音";
-    const getWebTextRunStatusText = getWebTextRunStatus ? "▶️ 运行中" : "⏸️ 已停止";
+    const getPushStatusText = getPushStatus ? "▶️ 运行中" : "⏸️ 已停止";
 
     // 抽屉显示状态管理
     const [visible, setVisible] = CAT_UI.useState(false);
@@ -138,25 +142,39 @@ function DM() {
         };
     }, []);
 
+    // push 配置变化时自动应用最新连接状态
+    CAT_UI.useEffect(() => {
+        if (!getPushStatus) {
+            initPushCatDevice(false);
+            return;
+        }
+        if (pushUrl && pushToken) {
+            initPushCatDevice(true, pushUrl, pushToken);
+        }
+    }, [getPushStatus, pushUrl, pushToken]);
+
+
+
     return CAT_UI.Space(
         [
             // 水平排列按钮和抽屉
             // 打开抽屉按钮
             CAT_UI.Space(
                 [
-                    CAT_UI.Text("webhook运行状态: "),
-                    CAT_UI.Button(getWebTextRunStatusText, {
+                    CAT_UI.Text("push运行状态: "),
+                    CAT_UI.Button(getPushStatusText, {
                         type: "primary",
                         onClick() {
-                            const newGetWebTextRunStatus = !getWebTextRunStatus;
-                            updateAllvalue({ ...Allvalue, getWebTextRunStatus: newGetWebTextRunStatus });
+                            const newgetPushStatus = !getPushStatus;
+                            patchAllvalue({ getPushStatus: newgetPushStatus });
+                            initPushCatDevice(newgetPushStatus, pushUrl, pushToken);
                         },
                         style: {
-                            backgroundColor: getWebTextRunStatusText === "⏸️ 已停止" ? "#ff4d4f" : undefined,
-                            borderColor: getWebTextRunStatusText === "⏸️ 已停止" ? "#ff4d4f" : undefined,
+                            backgroundColor: !getPushStatus ? "#ff4d4f" : undefined,
+                            borderColor: !getPushStatus ? "#ff4d4f" : undefined,
                             ":hover": {
-                                backgroundColor: getWebTextRunStatusText === "⏸️ 已停止" ? "#f5222d" : undefined,
-                                borderColor: getWebTextRunStatusText === "⏸️ 已停止" ? "#f5222d" : undefined
+                                backgroundColor: !getPushStatus ? "#f5222d" : undefined,
+                                borderColor: !getPushStatus ? "#f5222d" : undefined
                             }
                         }
                     }),
@@ -178,7 +196,7 @@ function DM() {
                         type: "primary",
                         onClick: () => {
                             const newVoiceEnabled = !voiceEnabled;
-                            updateAllvalue({ ...Allvalue, voiceEnabled: newVoiceEnabled });  // 更新状态，触发重新渲染
+                            patchAllvalue({ voiceEnabled: newVoiceEnabled });  // 更新状态，触发重新渲染
 
                             // 启用语音时，初始化语音合成（解决浏览器not-allowed限制）
                             if (newVoiceEnabled && 'speechSynthesis' in window) {
@@ -191,12 +209,12 @@ function DM() {
                         // 动态样式：根据静音状态切换颜色
                         style: {
                             // 静音时用红色，非静音时用primary默认蓝色（无需额外设置）
-                            backgroundColor: voiceEnabledText === "🔇 静音" ? "#ff4d4f" : undefined,
-                            borderColor: voiceEnabledText === "🔇 静音" ? "#ff4d4f" : undefined,
+                            backgroundColor: !voiceEnabled ? "#ff4d4f" : undefined,
+                            borderColor: !voiceEnabled ? "#ff4d4f" : undefined,
                             // 优化hover效果：静音状态下hover时颜色加深（符合视觉交互逻辑）
                             ":hover": {
-                                backgroundColor: voiceEnabledText === "🔇 静音" ? "#f5222d" : undefined,
-                                borderColor: voiceEnabledText === "🔇 静音" ? "#f5222d" : undefined
+                                backgroundColor: !voiceEnabled ? "#f5222d" : undefined,
+                                borderColor: !voiceEnabled ? "#f5222d" : undefined
                             }
                         }
                     }),
@@ -205,7 +223,19 @@ function DM() {
                     CAT_UI.Drawer(
                         // 抽屉内容
                         CAT_UI.createElement("div", { style: { textAlign: "left" } }, [
-                            CAT_UI.Divider("webdav设置"),  // 带文本的分隔线
+                            CAT_UI.Input({          // 输入框
+                                value: "测试输入框",
+                                onChange(val) {
+                                },
+                                style: { flex: 1, marginBottom: "8px" }   // 占满剩余空间并加底部间距
+                            }),
+                            CAT_UI.createElement(
+                                "h3", {
+                                style: { marginBottom: "16px", textAlign: "left", whiteSpace: "pre-line" }
+                            },
+                                "使用说明:\n1. 配置好pushUrl和pushToken后，点击运行状态按钮启动Gotify推送监听\n2. 根据需要开启或关闭语音播报功能\n3. 日志区域会显示最近的监控日志，方便查看脚本运行状态",
+                            ),
+                            CAT_UI.Divider("高级设置"),  // 带文本的分隔线
                             CAT_UI.createElement(
                                 "div",
                                 {
@@ -216,11 +246,31 @@ function DM() {
                                     },
                                 },
                                 [   // 子元素数组
-                                    CAT_UI.Text("Url："),  // 文本提示
+                                    CAT_UI.Text("pushUrl："),  // 文本提示
                                     CAT_UI.Input({          // 输入框
-                                        value: webdavurl,
+                                        value: pushUrl,
                                         onChange(val) {
-                                            updateAllvalue({ ...Allvalue, webdavurl: val });
+                                            patchAllvalue({ pushUrl: val });
+                                        },
+                                        style: { flex: 1, marginBottom: "8px" }   // 占满剩余空间并加底部间距
+                                    }),
+                                ]
+                            ),
+                            CAT_UI.createElement(
+                                "div",
+                                {
+                                    style: {
+                                        display: "flex",          // 弹性布局
+                                        justifyContent: "space-between",  // 水平方向两端对齐
+                                        alignItems: "center",     // 垂直方向居中对齐
+                                    },
+                                },
+                                [   // 子元素数组
+                                    CAT_UI.Text("pushToken："),  // 文本提示
+                                    CAT_UI.Input({          // 输入框
+                                        value: pushToken,
+                                        onChange(val) {
+                                            patchAllvalue({ pushToken: val });
                                         },
                                         style: { flex: 1, marginBottom: "8px" }   // 占满剩余空间并加底部间距
                                     }),
@@ -236,65 +286,23 @@ function DM() {
                                     },
                                 },
                                 [
-                                    CAT_UI.Text("email："),
+                                    CAT_UI.Text("commonPhraseUrl："),
                                     CAT_UI.Input({
-                                        value: webdavemail,
+                                        value: commonPhraseUrl,
                                         onChange(val) {
-                                            updateAllvalue({ ...Allvalue, webdavemail: val });
+                                            patchAllvalue({ commonPhraseUrl: val });
                                         },
-                                        style: { flex: 1, marginBottom: "8px" }   // 占满剩余空间并加底部间距
-                                    }),
-                                ]
-                            ),
-                            CAT_UI.createElement(
-                                "div",
-                                {
-                                    style: {
-                                        display: "flex",
-                                        justifyContent: "space-between",
-                                        alignItems: "center",
-                                    },
-                                },
-                                [
-                                    CAT_UI.Text("pw："),
-                                    CAT_UI.Input({
-                                        value: webdavpassword,
-                                        type: "password",
-                                        onChange(val) {
-                                            updateAllvalue({ ...Allvalue, webdavpassword: val });
-                                        },
-                                        style: { flex: 1, marginBottom: "8px" }   // 占满剩余空间并加底部间距
-                                    }),
-                                ]
-                            ),
-                            CAT_UI.createElement(
-                                "div",
-                                {
-                                    style: {
-                                        display: "flex",
-                                        justifyContent: "space-between",
-                                        alignItems: "center",
-                                    },
-                                },
-                                [
-                                    CAT_UI.Text("path："),
-                                    CAT_UI.Input({
-                                        value: webdavpath,
-                                        onChange(val) {
-                                            updateAllvalue({ ...Allvalue, webdavpath: val });
-                                        }
-                                        ,
                                         style: { flex: 1, marginBottom: "8px" }   // 占满剩余空间并加底部间距
                                     }),
                                 ]
                             ),
 
                             CAT_UI.Divider("其他设置"),  // 带文本的分隔线
-                            CAT_UI.Text("脚本猫的UI框架: " + webdavurl),
+                            CAT_UI.Text("脚本猫的UI框架: " + pushUrl),
                             CAT_UI.Button("我是按钮", {
                                 type: "primary",
                                 onClick() {
-                                    CAT_UI.Message.info("我被点击了,你输入了: " + webdavurl);
+                                    CAT_UI.Message.info("我被点击了,你输入了: " + pushUrl);
                                 },
                             }),
                             // 日志显示区域
@@ -334,38 +342,10 @@ function DM() {
                 }
             ),
             [
-                CAT_UI.Text("脚本猫的UI框架: " + (voiceEnabled ? "语音开启" : "语音关闭")),
-                CAT_UI.Button("常用语", {
+                CAT_UI.Button("常用语(未完成)", {
                     type: "primary",
                     onClick() {
-                        (async () => {
-                            try {
-                                // 从localStorage重新读取最新的数据，确保获得最新值
-                                const currentData = loadAllvalue();
-                                const { webdavurl: url, webdavemail: email, webdavpassword: password, webdavpath: path } = currentData;
 
-                                addLog('WebDAV参数 - URL: ' + url + ', Email: ' + email + ', Path: ' + path, 'info', true);
-
-                                const client = new WebDAVClient({
-                                    url: url,
-                                    username: email,
-                                    password: password // 不要把密码硬编码
-                                });
-
-                                const isexists = await client.exists(path);
-                                if (!isexists) {
-                                    addLog('文件不存在', 'info', true);
-                                    addLog("文件链接：" + url + path, 'info', true);
-                                } else {
-                                    addLog('文件已存在', 'info', true);
-                                    // 读文件
-                                    const text = await client.getFileContents(path);
-                                    addLog('读取文件内容: ' + text, 'info', true);
-                                }
-                            } catch (err) {
-                                addLog('WebDAV 操作出错: ' + err.message, 'warning', true);
-                            }
-                        })();
                     },
                 }),
             ]
@@ -547,8 +527,160 @@ function startMonitoring() {
     setInterval(checkCount, CONFIG.CHECK_INTERVAL);
 }
 
+
+// ========== Gotify WebSocket 推送集成 ==========
+let gotifyWS = null;
+let gotifyReconnectTimer = null;
+const GOTIFY_RECONNECT_INTERVAL = 3000;
+let gotifyEnabled = false; // 控制是否允许重连
+let gotifyConfigKey = '';
+
+// 安全复制工具：仅在页面聚焦且支持 clipboard 时尝试复制
+function safeCopyText(text) {
+    if (!text) return;
+    // 1) 优先使用 GM_setClipboard（无需焦点）
+    if (typeof GM_setClipboard === 'function') {
+        try {
+            GM_setClipboard(text);
+            console.log('[Gotify] 已复制到剪贴板 (GM_setClipboard)');
+            //成功的提示音
+            const player = new Audio();
+            player.src = 'https://www.w3school.com.cn/i/song.mp3'; // 纠正后的地址
+            const p = player.play();
+            if (p && typeof p.catch === 'function') {
+                p.catch(() => { });           // 静默处理拦截
+            }
+            return;
+        } catch (e) {
+            console.error('[Gotify] GM_setClipboard 失败，尝试浏览器 API:', e);
+        }
+    }
+
+    // 2) 浏览器异步 clipboard API
+    if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+        navigator.clipboard.writeText(text).then(() => {
+            console.log('[Gotify] 已复制到剪贴板 (navigator.clipboard)');
+            //成功的提示音
+
+        }).catch(err => {
+            console.error('[Gotify] 复制到剪贴板失败，结束:', err);
+        });
+        return;
+    }
+}
+
+function connectGotifyWebSocket(pushUrl, pushToken) {
+    if (gotifyReconnectTimer) {
+        clearTimeout(gotifyReconnectTimer);
+        gotifyReconnectTimer = null;
+    }
+    if (!pushUrl || !pushToken) {
+        gotifyEnabled = false;
+        CAT_UI.Message.warning('未配置 Gotify pushUrl 或 pushToken，跳过推送监听');
+        console.warn('未配置 Gotify pushUrl 或 pushToken，跳过推送监听');
+        // 关闭可能存在的旧连接，避免使用过期配置重连
+        if (gotifyWS) {
+            try { gotifyWS.close(1000, '配置缺失，停止推送'); } catch (e) { }
+            gotifyWS = null;
+        }
+        return;
+    }
+    const configKey = `${pushUrl}|${pushToken}`;
+    // 如果当前配置已在连接中或已连接，避免重复创建导致的闪断
+    if (gotifyWS && (gotifyWS.readyState === WebSocket.CONNECTING || gotifyWS.readyState === WebSocket.OPEN) && gotifyConfigKey === configKey) {
+        return;
+    }
+
+    gotifyEnabled = true;
+    gotifyConfigKey = configKey;
+    // 关闭已有连接
+    if (gotifyWS) {
+        try { gotifyWS.close(1000, '重连'); } catch (e) { }
+        gotifyWS = null;
+    }
+    // 构造 ws 地址
+    try {
+        const urlObj = new URL('/stream', pushUrl.replace(/\/$/, ''));
+        urlObj.protocol = urlObj.protocol === 'https:' ? 'wss:' : 'ws:';
+        urlObj.searchParams.set('token', pushToken);
+        gotifyWS = new window.WebSocket(urlObj.href);
+        console.log('[Gotify] 尝试连接: ', urlObj.href);
+    } catch (e) {
+        console.error('[Gotify] 地址格式错误:', e);
+        return;
+    }
+    gotifyWS.onopen = () => {
+        CAT_UI.Message.success('Gotify WebSocket 连接成功');
+        console.log('[Gotify] WebSocket 连接成功');
+    };
+    gotifyWS.onmessage = (event) => {
+        try {
+            const msg = JSON.parse(event.data);
+            const { id, title, message: text, priority, date } = msg;
+            CAT_UI.Message.success(`收到Gotify推送：${title}`);
+            console.log('[Gotify] 收到消息:', msg);
+            if (text) {
+                safeCopyText(text);
+            }
+        } catch (err) {
+            console.error('[Gotify] 消息解析失败:', err, event.data);
+        }
+    };
+    gotifyWS.onerror = (error) => {
+        CAT_UI.Message.error('Gotify WebSocket 发生错误，查看控制台详情');
+        console.error('[Gotify] WebSocket 错误:', error);
+    };
+    gotifyWS.onclose = (event) => {
+        CAT_UI.Message.info('Gotify WebSocket 连接关闭');
+        gotifyWS = null;
+        if (!gotifyEnabled) { return; }
+        if (gotifyReconnectTimer) clearTimeout(gotifyReconnectTimer);
+        gotifyReconnectTimer = setTimeout(() => connectGotifyWebSocket(pushUrl, pushToken), GOTIFY_RECONNECT_INTERVAL);
+    };
+}
+
+// 初始化 Gotify 监听（根据配置）
+function initPushCatDevice(enabled, pushUrl, pushToken) {
+    if (!enabled) {
+        gotifyEnabled = false;
+        gotifyConfigKey = '';
+        if (gotifyWS) {
+            try { gotifyWS.close(1000, '手动关闭'); } catch (e) { }
+            gotifyWS = null;
+        }
+        if (gotifyReconnectTimer) {
+            clearTimeout(gotifyReconnectTimer);
+            gotifyReconnectTimer = null;
+        }
+        return;
+    }
+
+    if (!pushUrl || !pushToken) {
+        gotifyEnabled = false;
+        gotifyConfigKey = '';
+        CAT_UI.Message.warning('未配置 Gotify pushUrl 或 pushToken，未启动推送监听');
+        if (gotifyWS) {
+            try { gotifyWS.close(1000, '配置缺失，停止推送'); } catch (e) { }
+            gotifyWS = null;
+        }
+        if (gotifyReconnectTimer) {
+            clearTimeout(gotifyReconnectTimer);
+            gotifyReconnectTimer = null;
+        }
+        return;
+    }
+
+    connectGotifyWebSocket(pushUrl, pushToken);
+}
+
+// 页面关闭时断开连接
+window.addEventListener('unload', () => {
+    if (gotifyWS) try { gotifyWS.close(1000, '页面关闭'); } catch (e) { }
+});
+
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', startMonitoring);
 } else {
     startMonitoring();
+
 }
