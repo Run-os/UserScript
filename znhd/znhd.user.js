@@ -233,7 +233,7 @@ function DM() {
                                 "h3", {
                                 style: { marginBottom: "16px", textAlign: "left", whiteSpace: "pre-line" }
                             },
-                                "使用说明:\n1. 配置好pushUrl和pushToken后，点击运行状态按钮启动Gotify推送监听\n2. 根据需要开启或关闭语音播报功能\n3. 日志区域会显示最近的监控日志，方便查看脚本运行状态",
+                                "使用说明:\n1. 配置好pushUrl和pushToken后，点击运行状态按钮启动Gotify推送监听\n2. 根据需要开启或关闭语音播报功能\n3. 日志区域会显示最近的监控日志，方便查看脚本运行状态\n4. 接收消息必须使用 clientToken（不是 appToken）",
                             ),
                             CAT_UI.Divider("高级设置"),  // 带文本的分隔线
                             CAT_UI.createElement(
