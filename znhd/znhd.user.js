@@ -545,11 +545,8 @@ function safeCopyText(text) {
             console.log('[Gotify] 已复制到剪贴板 (GM_setClipboard)');
             //成功的提示音
             const player = new Audio();
-            player.src = 'https://www.w3school.com.cn/i/song.mp3'; // 纠正后的地址
+            player.src = 'https://proxy.gitwarp.com/https://raw.githubusercontent.com/Run-os/UserScript/refs/heads/main/znhd/dida.mp3'; // 纠正后的地址
             const p = player.play();
-            if (p && typeof p.catch === 'function') {
-                p.catch(() => { });           // 静默处理拦截
-            }
             return;
         } catch (e) {
             console.error('[Gotify] GM_setClipboard 失败，尝试浏览器 API:', e);
@@ -561,6 +558,9 @@ function safeCopyText(text) {
         navigator.clipboard.writeText(text).then(() => {
             console.log('[Gotify] 已复制到剪贴板 (navigator.clipboard)');
             //成功的提示音
+            const player = new Audio();
+            player.src = 'https://proxy.gitwarp.com/https://raw.githubusercontent.com/Run-os/UserScript/refs/heads/main/znhd/dida.mp3'; // 纠正后的地址
+            const p = player.play();
 
         }).catch(err => {
             console.error('[Gotify] 复制到剪贴板失败，结束:', err);
