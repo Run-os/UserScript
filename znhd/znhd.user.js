@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name        征纳互动人数和在线监控
 // @namespace   https://scriptcat.org/
-// @description 基于Arco做的UI库, 用于快速开发脚本的UI界面
-// @version     25.12.06-1
+// @description 监控征纳互动等待人数和在线状态，支持语音播报和Gotify推送通知。
+// @version     25.12.07-1
 // @author      runos
 // @match       https://znhd.hunan.chinatax.gov.cn:8443/*
 // @match       https://www.52pojie.cn/*
