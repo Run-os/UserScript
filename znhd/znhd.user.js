@@ -2,7 +2,7 @@
 // @name        征纳互动人数和在线监控
 // @namespace   https://scriptcat.org/
 // @description 监控征纳互动等待人数和在线状态，支持语音播报和Gotify推送通知。详细配置请点击脚本猫面板中的设置按钮。详细说明见：
-// @version     25.12.08 v2
+// @version     25.12.08 v3
 // @author      runos
 // @match       https://znhd.hunan.chinatax.gov.cn:8443/*
 // @match       https://example.com/?znhd
@@ -39,7 +39,7 @@ const CONFIG = {
     // 检查间隔（毫秒）
     CHECK_INTERVAL: 3000,
     // 最大日志条目数
-    MAX_LOG_ENTRIES: 5,
+    MAX_LOG_ENTRIES: 10,
     WORKING_HOURS: {
         MORNING: { START: 9, END: 12 },
         AFTERNOON: { START: 13.5, END: 18 }
@@ -345,7 +345,7 @@ function DM() {
                             // 日志显示区域
                             CAT_UI.Divider("日志内容"),  // 日志标题分隔线
                             CAT_UI.createElement(
-                                "pre",
+                                "div",
                                 {
                                     style: {
                                         whiteSpace: "pre-wrap",
@@ -354,10 +354,35 @@ function DM() {
                                         overflowY: "auto",
                                         backgroundColor: "#f5f5f5",
                                         padding: "10px",
-                                        borderRadius: "4px"
+                                        borderRadius: "4px",
+                                        fontFamily: "monospace",
+                                        fontSize: "12px"
                                     }
                                 },
-                                logEntries.map(entry => `${entry.timestamp} - ${entry.message}`).join("\n")
+                                logEntries.map((entry, index) => {
+                                    // 根据日志类型定义颜色
+                                    const colorMap = {
+                                        info: "#1890ff",      // 蓝色
+                                        warning: "#faad14",   // 橙黄色
+                                        success: "#52c41a",   // 绿色
+                                        error: "#ff4d4f"      // 红色
+                                    };
+                                    const color = colorMap[entry.type] || "#333333";
+                                    return CAT_UI.createElement(
+                                        "div",
+                                        {
+                                            key: index,
+                                            style: {
+                                                color: color,
+                                                marginBottom: "4px",
+                                                borderLeft: `3px solid ${color}`,
+                                                paddingLeft: "8px",
+                                                fontWeight: "bold"  // 加粗
+                                            }
+                                        },
+                                        `${entry.timestamp} - ${entry.message}`
+                                    );
+                                })
                             ),
                         ]),
                         // 抽屉属性
@@ -449,6 +474,7 @@ function DM() {
                                                 onClick() {
                                                     safeCopyText(value);
                                                     CAT_UI.Message.success("已复制: " + key);
+                                                    addLog(`常用语已复制: ${key}`, 'success');
                                                     setCommonPhrasesVisible(false);
                                                 },
                                                 style: { marginBottom: "8px", width: "100%" }
@@ -664,7 +690,7 @@ function safeCopyText(text) {
             console.log('[Gotify] 已复制到剪贴板 (GM_setClipboard)');
             //成功的提示音
             const player = new Audio();
-            player.src = 'https://cdn.jsdelivr.net/gh/Run-os/UserScript/znhd/dida.mp3'; // 纠正后的地址
+            player.src = CONFIG.didaUrl;
             const p = player.play();
             return;
         } catch (e) {
@@ -678,7 +704,7 @@ function safeCopyText(text) {
             console.log('[Gotify] 已复制到剪贴板 (navigator.clipboard)');
             //成功的提示音
             const player = new Audio();
-            player.src = 'https://cdn.jsdelivr.net/gh/Run-os/UserScript/znhd/dida.mp3'; // 纠正后的地址
+            player.src = CONFIG.didaUrl;
             const p = player.play();
 
         }).catch(err => {
@@ -739,7 +765,7 @@ function connectGotifyWebSocket(webhookUrl, webhookToken) {
             const { id, title, message: text, priority, date } = msg;
             CAT_UI.Message.success(`收到Gotify推送：${title}`);
             console.log('[Gotify] 收到消息:', msg);
-            addLog(`Gotify消息 - 标题: ${title}, 内容: ${text}`, 'info');
+            addLog(`Gotify消息：${text}`, 'success');
             if (text) {
                 safeCopyText(text);
             }
