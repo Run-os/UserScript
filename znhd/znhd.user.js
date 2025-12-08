@@ -43,16 +43,31 @@ const CONFIG = {
     WORKING_HOURS: {
         MORNING: { START: 9, END: 12 },
         AFTERNOON: { START: 13.5, END: 18 }
-    }
+    },
+    didaUrl: 'https://cdn.jsdelivr.net/gh/Run-os/UserScript/znhd/dida.mp3',
 };
 
 // ==========日志管理==========
 // 全局日志状态管理
 let setLogEntriesCallback = null;
+// 存储上一次的日志文本（用于重复内容检测）
+let lastLogMessage = null;
 
 // 添加日志条目函数
 function addLog(message, type = 'info', logenabled = false) {
     const timestamp = new Date().toTimeString().slice(0, 8);
+
+    // 检查是否为重复内容（忽略事件等动态信息）
+    const pureMessage = message;
+    if (lastLogMessage && pureMessage === lastLogMessage) {
+        // 如果内容相同（忽略事件），不输出本次内容
+        console.log('[监控] 重复日志，已忽略:', message);
+        return;
+    }
+
+    // 更新上一次的日志文本
+    lastLogMessage = pureMessage;
+
     const logItem = { timestamp, message, type };
 
     // 更新React状态
@@ -75,9 +90,9 @@ function addLog(message, type = 'info', logenabled = false) {
 const STORAGE_KEY = 'scriptCat_Allvalue';
 const DEFAULTS = {
     voiceEnabled: true,
-    getPushStatus: true,
-    pushUrl: "",
-    pushToken: "",
+    getwebhookStatus: true,
+    webhookUrl: "",
+    webhookToken: "",
     JsonUrl: "",
 };
 
@@ -123,10 +138,10 @@ function DM() {
     const patchAllvalue = (kv) => updateAllvalue({ ...Allvalue, ...kv });
 
     // 解构状态变量，方便后续使用
-    const { voiceEnabled, getPushStatus, pushUrl, pushToken, JsonUrl } = Allvalue;
+    const { voiceEnabled, getwebhookStatus, webhookUrl, webhookToken, JsonUrl } = Allvalue;
 
     const voiceEnabledText = voiceEnabled ? "🔊 语音" : "🔇 静音";
-    const getPushStatusText = getPushStatus ? "▶️ 运行中" : "⏸️ 已停止";
+    const getwebhookStatusText = getwebhookStatus ? "▶️ 运行中" : "⏸️ 已停止";
 
     // 设置抽屉显示状态管理
     const [visible, setVisible] = CAT_UI.useState(false);
@@ -147,16 +162,16 @@ function DM() {
         };
     }, []);
 
-    // push 配置变化时自动应用最新连接状态
+    // webhook 配置变化时自动应用最新连接状态
     CAT_UI.useEffect(() => {
-        if (!getPushStatus) {
-            initPushCatDevice(false);
+        if (!getwebhookStatus) {
+            initwebhookCatDevice(false);
             return;
         }
-        if (pushUrl && pushToken) {
-            initPushCatDevice(true, pushUrl, pushToken);
+        if (webhookUrl && webhookToken) {
+            initwebhookCatDevice(true, webhookUrl, webhookToken);
         }
-    }, [getPushStatus, pushUrl, pushToken]);
+    }, [getwebhookStatus, webhookUrl, webhookToken]);
 
     // 加载常用语数据的函数
     const loadPhrasesData = () => {
@@ -207,20 +222,19 @@ function DM() {
             CAT_UI.Space(
                 [
                     CAT_UI.Text("webhook运行状态: "),
-                    CAT_UI.Button(getPushStatusText, {
+                    CAT_UI.Button(getwebhookStatusText, {
                         type: "primary",
                         onClick() {
-                            const newgetPushStatus = !getPushStatus;
-                            patchAllvalue({ getPushStatus: newgetPushStatus });
-                            initPushCatDevice(newgetPushStatus, pushUrl, pushToken);
+                            const newgetwebhookStatus = !getwebhookStatus;
+                            patchAllvalue({ getwebhookStatus: newgetwebhookStatus });
+                            initwebhookCatDevice(newgetwebhookStatus, webhookUrl, webhookToken);
                         },
                         style: {
-                            backgroundColor: !getPushStatus ? "#ff4d4f" : undefined,
-                            borderColor: !getPushStatus ? "#ff4d4f" : undefined,
-                            ":hover": {
-                                backgroundColor: !getPushStatus ? "#f5222d" : undefined,
-                                borderColor: !getPushStatus ? "#f5222d" : undefined
-                            }
+                            //字体加粗
+                            fontWeight: "bold",
+                            // 动态样式：根据运行状态切换颜色
+                            backgroundColor: !getwebhookStatus ? "#990018" : "#007e44",
+                            borderColor: !getwebhookStatus ? "#990018" : "#007e44",
                         }
                     }),
                 ],
@@ -251,14 +265,10 @@ function DM() {
                         },
                         // 动态样式：根据静音状态切换颜色
                         style: {
-                            // 静音时用红色，非静音时用primary默认蓝色（无需额外设置）
-                            backgroundColor: !voiceEnabled ? "#ff4d4f" : undefined,
-                            borderColor: !voiceEnabled ? "#ff4d4f" : undefined,
-                            // 优化hover效果：静音状态下hover时颜色加深（符合视觉交互逻辑）
-                            ":hover": {
-                                backgroundColor: !voiceEnabled ? "#f5222d" : undefined,
-                                borderColor: !voiceEnabled ? "#f5222d" : undefined
-                            }
+                            //字体加粗
+                            fontWeight: "bold",
+                            backgroundColor: !voiceEnabled ? "#990018" : "#007e44",
+                            borderColor: !voiceEnabled ? "#990018" : "#007e44",
                         }
                     }),
                 ]
@@ -287,9 +297,9 @@ function DM() {
                                         whiteSpace: "pre-line"
                                     }
                                 },
-                                "1. 配置好pushUrl和pushToken（即clientToken）后，点击运行状态按钮启动Gotify推送监听\n2. 根据需要开启或关闭语音播报功能\n3. 日志区域会显示最近的监控日志",
+                                "1. 配置好webhookUrl和webhookToken（即clientToken）后，点击运行状态按钮启动Gotify推送监听\n2. 根据需要开启或关闭语音播报功能\n3. 日志区域会显示最近的监控日志",
                             ),
-                            CAT_UI.Divider("push设置"),  // 带文本的分隔线
+                            CAT_UI.Divider("webhook设置"),  // 带文本的分隔线
                             CAT_UI.createElement(
                                 "div",
                                 {
@@ -300,11 +310,11 @@ function DM() {
                                     },
                                 },
                                 [   // 子元素数组
-                                    CAT_UI.Text("pushUrl："),  // 文本提示
+                                    CAT_UI.Text("webhookUrl："),  // 文本提示
                                     CAT_UI.Input({          // 输入框
-                                        value: pushUrl,
+                                        value: webhookUrl,
                                         onChange(val) {
-                                            patchAllvalue({ pushUrl: val });
+                                            patchAllvalue({ webhookUrl: val });
                                         },
                                         style: { flex: 1, marginBottom: "8px" }   // 占满剩余空间并加底部间距
                                     }),
@@ -320,11 +330,11 @@ function DM() {
                                     },
                                 },
                                 [   // 子元素数组
-                                    CAT_UI.Text("pushToken："),  // 文本提示
+                                    CAT_UI.Text("webhookToken："),  // 文本提示
                                     CAT_UI.Input({          // 输入框
-                                        value: pushToken,
+                                        value: webhookToken,
                                         onChange(val) {
-                                            patchAllvalue({ pushToken: val });
+                                            patchAllvalue({ webhookToken: val });
                                         },
                                         style: { flex: 1, marginBottom: "8px" }   // 占满剩余空间并加底部间距
                                     }),
@@ -542,7 +552,7 @@ function checkCount() {
         const ocurrentElement = domCache.ocurrentElement;
         if (!ocurrentElement) {
             addLog('找不到人数元素', 'warning');
-            //speak("找不到人数元素");
+            speak("找不到人数元素");
             return;
         }
 
@@ -593,7 +603,7 @@ function speak(text) {
     utterance.rate = 1.0;
 
     // 添加到队列
-    speechQueue.push(utterance);
+    speechQueue.webhook(utterance);
     processSpeechQueue();
 }
 
@@ -654,7 +664,7 @@ function safeCopyText(text) {
             console.log('[Gotify] 已复制到剪贴板 (GM_setClipboard)');
             //成功的提示音
             const player = new Audio();
-            player.src = 'https://proxy.gitwarp.com/https://raw.githubusercontent.com/Run-os/UserScript/refs/heads/main/znhd/dida.mp3'; // 纠正后的地址
+            player.src = 'https://cdn.jsdelivr.net/gh/Run-os/UserScript/znhd/dida.mp3'; // 纠正后的地址
             const p = player.play();
             return;
         } catch (e) {
@@ -668,7 +678,7 @@ function safeCopyText(text) {
             console.log('[Gotify] 已复制到剪贴板 (navigator.clipboard)');
             //成功的提示音
             const player = new Audio();
-            player.src = 'https://proxy.gitwarp.com/https://raw.githubusercontent.com/Run-os/UserScript/refs/heads/main/znhd/dida.mp3'; // 纠正后的地址
+            player.src = 'https://cdn.jsdelivr.net/gh/Run-os/UserScript/znhd/dida.mp3'; // 纠正后的地址
             const p = player.play();
 
         }).catch(err => {
@@ -678,15 +688,15 @@ function safeCopyText(text) {
     }
 }
 
-function connectGotifyWebSocket(pushUrl, pushToken) {
+function connectGotifyWebSocket(webhookUrl, webhookToken) {
     if (gotifyReconnectTimer) {
         clearTimeout(gotifyReconnectTimer);
         gotifyReconnectTimer = null;
     }
-    if (!pushUrl || !pushToken) {
+    if (!webhookUrl || !webhookToken) {
         gotifyEnabled = false;
-        CAT_UI.Message.warning('未配置 Gotify pushUrl 或 pushToken，跳过推送监听');
-        console.warn('未配置 Gotify pushUrl 或 pushToken，跳过推送监听');
+        CAT_UI.Message.warning('未配置 Gotify webhookUrl 或 webhookToken，跳过推送监听');
+        console.warn('未配置 Gotify webhookUrl 或 webhookToken，跳过推送监听');
         // 关闭可能存在的旧连接，避免使用过期配置重连
         if (gotifyWS) {
             try { gotifyWS.close(1000, '配置缺失，停止推送'); } catch (e) { }
@@ -694,7 +704,7 @@ function connectGotifyWebSocket(pushUrl, pushToken) {
         }
         return;
     }
-    const configKey = `${pushUrl}|${pushToken}`;
+    const configKey = `${webhookUrl}|${webhookToken}`;
     // 如果当前配置已在连接中或已连接，避免重复创建导致的闪断
     if (gotifyWS && (gotifyWS.readyState === WebSocket.CONNECTING || gotifyWS.readyState === WebSocket.OPEN) && gotifyConfigKey === configKey) {
         return;
@@ -709,9 +719,9 @@ function connectGotifyWebSocket(pushUrl, pushToken) {
     }
     // 构造 ws 地址
     try {
-        const urlObj = new URL('/stream', pushUrl.replace(/\/$/, ''));
+        const urlObj = new URL('/stream', webhookUrl.replace(/\/$/, ''));
         urlObj.protocol = urlObj.protocol === 'https:' ? 'wss:' : 'ws:';
-        urlObj.searchParams.set('token', pushToken);
+        urlObj.searchParams.set('token', webhookToken);
         gotifyWS = new window.WebSocket(urlObj.href);
         console.log('[Gotify] 尝试连接: ', urlObj.href);
     } catch (e) {
@@ -721,6 +731,7 @@ function connectGotifyWebSocket(pushUrl, pushToken) {
     gotifyWS.onopen = () => {
         CAT_UI.Message.success('Gotify WebSocket 连接成功');
         console.log('[Gotify] WebSocket 连接成功');
+        addLog('Gotify 推送监听已启动', 'success');
     };
     gotifyWS.onmessage = (event) => {
         try {
@@ -728,6 +739,7 @@ function connectGotifyWebSocket(pushUrl, pushToken) {
             const { id, title, message: text, priority, date } = msg;
             CAT_UI.Message.success(`收到Gotify推送：${title}`);
             console.log('[Gotify] 收到消息:', msg);
+            addLog(`Gotify消息 - 标题: ${title}, 内容: ${text}`, 'info');
             if (text) {
                 safeCopyText(text);
             }
@@ -738,18 +750,20 @@ function connectGotifyWebSocket(pushUrl, pushToken) {
     gotifyWS.onerror = (error) => {
         CAT_UI.Message.error('Gotify WebSocket 发生错误，查看控制台详情');
         console.error('[Gotify] WebSocket 错误:', error);
+        addLog('Gotify WebSocket 发生错误，查看控制台详情', 'error');
     };
     gotifyWS.onclose = (event) => {
         CAT_UI.Message.error('Gotify WebSocket 连接关闭');
+        addLog('Gotify WebSocket 连接关闭', 'warning');
         gotifyWS = null;
         if (!gotifyEnabled) { return; }
         if (gotifyReconnectTimer) clearTimeout(gotifyReconnectTimer);
-        gotifyReconnectTimer = setTimeout(() => connectGotifyWebSocket(pushUrl, pushToken), GOTIFY_RECONNECT_INTERVAL);
+        gotifyReconnectTimer = setTimeout(() => connectGotifyWebSocket(webhookUrl, webhookToken), GOTIFY_RECONNECT_INTERVAL);
     };
 }
 
 // 初始化 Gotify 监听（根据配置）
-function initPushCatDevice(enabled, pushUrl, pushToken) {
+function initwebhookCatDevice(enabled, webhookUrl, webhookToken) {
     if (!enabled) {
         gotifyEnabled = false;
         gotifyConfigKey = '';
@@ -764,10 +778,10 @@ function initPushCatDevice(enabled, pushUrl, pushToken) {
         return;
     }
 
-    if (!pushUrl || !pushToken) {
+    if (!webhookUrl || !webhookToken) {
         gotifyEnabled = false;
         gotifyConfigKey = '';
-        CAT_UI.Message.warning('未配置 Gotify pushUrl 或 pushToken，未启动推送监听');
+        CAT_UI.Message.warning('未配置 Gotify webhookUrl 或 webhookToken，未启动推送监听');
         if (gotifyWS) {
             try { gotifyWS.close(1000, '配置缺失，停止推送'); } catch (e) { }
             gotifyWS = null;
@@ -779,7 +793,7 @@ function initPushCatDevice(enabled, pushUrl, pushToken) {
         return;
     }
 
-    connectGotifyWebSocket(pushUrl, pushToken);
+    connectGotifyWebSocket(webhookUrl, webhookToken);
 }
 
 // 页面关闭时断开连接
