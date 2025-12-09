@@ -16,7 +16,7 @@
 // @connect     *
 // @grant       GM_notification
 // @homepage    https://scriptcat.org/zh-CN/script-show-page/3650
-// @require     https://scriptcat.org/lib/1167/1.0.0/%E8%84%9A%E6%9C%AC%E7%8C%ABUI%E5%BA%93.js  // 引入脚本猫UI库
+// @require     https://scriptcat.org/lib/946/1.0.2/PushCat.js?sha384-oSlgx/WB23lLz4OArRxG+kpIkZnfokQmTboHl4CT/yG38oxllL9+O+bo7K2Icrja
 // ==/UserScript==
 
 // 暴露变量到全局，方便在浏览器控制台调试
