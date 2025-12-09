@@ -2,7 +2,7 @@
 // @name        征纳互动人数和在线监控
 // @namespace   https://scriptcat.org/
 // @description 监控征纳互动等待人数和在线状态，支持语音播报和Gotify推送通知。详细配置请点击脚本猫面板中的设置按钮。详细说明见：
-// @version     25.12.08 v3
+// @version     25.12.09-1
 // @author      runos
 // @match       https://znhd.hunan.chinatax.gov.cn:8443/*
 // @match       https://example.com/?znhd
@@ -285,6 +285,33 @@ function DM() {
                     CAT_UI.Drawer(
                         // 抽屉内容
                         CAT_UI.createElement("div", { style: { textAlign: "left" } }, [
+                            CAT_UI.Space(
+                                [
+                                    CAT_UI.Button("[脚本主页]", {
+                                        type: "link",
+                                        onClick: () => {
+                                            window.open('https://scriptcat.org/zh-CN/script-show-page/3650', '_blank');
+                                        },
+                                        style: {
+                                            padding: "0 8px"
+                                            //蓝色字体
+                                            , color: "#1890ff", fontWeight: "bold"
+                                        }
+                                    }),
+                                    CAT_UI.Button("[使用教程]", {
+                                        type: "link",
+                                        onClick: () => {
+                                            window.open('https://flowus.cn/runos/share/e48623a2-f273-4327-8597-639e08902be8?code=1YD5Z5', '_blank');
+                                        },
+                                        style: {
+                                            padding: "0 8px"
+                                            //蓝色字体
+                                            , color: "#1890ff", fontWeight: "bold"
+                                        }
+                                    }),
+                                ],
+                                { direction: "horizontal", size: "small" }
+                            ),
                             CAT_UI.Divider("使用说明"),
                             CAT_UI.createElement(
                                 "p",
