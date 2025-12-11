@@ -2,7 +2,7 @@
 // @name        征纳互动人数和在线监控
 // @namespace   https://scriptcat.org/
 // @description 监控征纳互动等待人数和在线状态，支持语音播报和Gotify推送通知。详细配置请点击脚本猫面板中的设置按钮。详细说明见：
-// @version     25.12.09-2
+// @version     25.12.09-4
 // @author      runos
 // @match       https://znhd.hunan.chinatax.gov.cn:8443/*
 // @match       https://example.com/*
@@ -656,7 +656,7 @@ function speak(text) {
     utterance.rate = 1.0;
 
     // 添加到队列
-    speechQueue.webhook(utterance);
+    speechQueue.push(utterance);
     processSpeechQueue();
 }
 
@@ -715,10 +715,9 @@ function safeCopyText(text) {
         try {
             GM_setClipboard(text);
             console.log('[Gotify] 已复制到剪贴板 (GM_setClipboard)');
-            //成功的提示音
             const player = new Audio();
             player.src = CONFIG.didaUrl;
-            const p = player.play();
+            player.play();
             return;
         } catch (e) {
             console.error('[Gotify] GM_setClipboard 失败，尝试浏览器 API:', e);
@@ -729,15 +728,97 @@ function safeCopyText(text) {
     if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
         navigator.clipboard.writeText(text).then(() => {
             console.log('[Gotify] 已复制到剪贴板 (navigator.clipboard)');
-            //成功的提示音
             const player = new Audio();
             player.src = CONFIG.didaUrl;
-            const p = player.play();
-
+            player.play();
         }).catch(err => {
             console.error('[Gotify] 复制到剪贴板失败，结束:', err);
         });
         return;
+    }
+}
+
+function isBase64ImageString(text) {
+    if (typeof text !== 'string') { return false; }
+    const trimmed = text.trim();
+    if (trimmed.startsWith('data:image/') && trimmed.includes(';base64,')) { return true; }
+    if (trimmed.length < 100) { return false; }
+    const cleaned = trimmed.replace(/\s+/g, '');
+    return /^[A-Za-z0-9+/]+={0,2}$/.test(cleaned);
+}
+
+function buildDataUrlFromBase64(text) {
+    if (text.startsWith('data:image/')) { return text; }
+    return `data:image/png;base64,${text}`;
+}
+
+function blobToBase64(blob) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+    });
+}
+
+async function convertImageBlobToPng(blob) {
+    try {
+        const bitmap = await createImageBitmap(blob);
+        const canvas = document.createElement('canvas');
+        canvas.width = bitmap.width;
+        canvas.height = bitmap.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(bitmap, 0, 0);
+        return await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+    } catch (err) {
+        console.error('[Gotify] 转换图片为 PNG 失败:', err);
+        return blob; // 退化：返回原始 blob 继续尝试
+    }
+}
+
+async function copyBase64ImageToClipboard(text) {
+    try {
+        const dataUrl = buildDataUrlFromBase64(text.trim());
+        const res = await fetch(dataUrl);
+        const blob = await res.blob();
+        const pngBlob = await convertImageBlobToPng(blob);
+        const mime = 'image/png';
+
+        // 首选 Clipboard API（强制使用 PNG 以兼容多数实现）
+        if (navigator.clipboard && typeof navigator.clipboard.write === 'function' && typeof window.ClipboardItem === 'function') {
+            try {
+                await navigator.clipboard.write([new ClipboardItem({ [mime]: pngBlob })]);
+                const player = new Audio();
+                player.src = CONFIG.didaUrl;
+                player.play();
+                addLog('图片已复制到剪贴板', 'success');
+                return true;
+            } catch (clipErr) {
+                console.error('[Gotify] Clipboard API 图片写入失败:', clipErr);
+            }
+        }
+
+        // 退化方案：尝试 GM_setClipboard 写入 dataURL
+        if (typeof GM_setClipboard === 'function') {
+            try {
+                const b64DataUrl = await blobToBase64(pngBlob);
+                GM_setClipboard(b64DataUrl, { type: 'image', mimetype: mime });
+                const player = new Audio();
+                player.src = CONFIG.didaUrl;
+                player.play();
+                addLog('图片已复制到剪贴板 (GM_setClipboard)', 'success');
+                return true;
+            } catch (gmErr) {
+                console.error('[Gotify] GM_setClipboard 图片写入失败:', gmErr);
+            }
+        }
+
+        addLog('当前环境不支持图片剪贴板写入', 'warning');
+        return false;
+    } catch (err) {
+        console.error('[Gotify] 复制图片到剪贴板失败:', err);
+        addLog(`复制图片到剪贴板失败: ${err && err.message ? err.message : '未知错误'}`, 'error');
+        return false;
     }
 }
 
@@ -786,15 +867,26 @@ function connectGotifyWebSocket(webhookUrl, webhookToken) {
         console.log('[Gotify] WebSocket 连接成功');
         addLog('Gotify 推送监听已启动', 'success');
     };
-    gotifyWS.onmessage = (event) => {
+    gotifyWS.onmessage = async (event) => {
         try {
+
             const msg = JSON.parse(event.data);
             const { id, title, message: text, priority, date } = msg;
-            CAT_UI.Message.success(`收到Gotify推送：${title}`);
+            CAT_UI.Message.success(`收到Gotify推送：${text}`);
             console.log('[Gotify] 收到消息:', msg);
-            addLog(`Gotify消息：${text}`, 'success');
+
+            if (text && isBase64ImageString(text)) {
+                const copied = await copyBase64ImageToClipboard(text);
+                addLog(copied ? 'Gotify消息：图片已复制到剪贴板' : 'Gotify消息：图片复制失败，已保留原文', copied ? 'success' : 'warning');
+                if (!copied && text) {
+                    safeCopyText(text);
+                }
+                return;
+            }
+
             if (text) {
                 safeCopyText(text);
+                addLog(`Gotify消息：${text}`, 'success');
             }
         } catch (err) {
             console.error('[Gotify] 消息解析失败:', err, event.data);
