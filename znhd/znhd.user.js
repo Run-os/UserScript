@@ -94,6 +94,7 @@ const DEFAULTS = {
     webhookUrl: "",
     webhookToken: "",
     JsonUrl: "",
+    postToken: "",
 };
 
 // 从localStorage加载Allvalue数据
@@ -138,7 +139,7 @@ function DM() {
     const patchAllvalue = (kv) => updateAllvalue({ ...Allvalue, ...kv });
 
     // 解构状态变量，方便后续使用
-    const { voiceEnabled, getwebhookStatus, webhookUrl, webhookToken, JsonUrl } = Allvalue;
+    const { voiceEnabled, getwebhookStatus, webhookUrl, webhookToken, postToken, JsonUrl } = Allvalue;
 
     const voiceEnabledText = voiceEnabled ? "🔊 语音" : "🔇 静音";
     const getwebhookStatusText = getwebhookStatus ? "▶️ 运行中" : "⏸️ 已停止";
@@ -312,7 +313,7 @@ function DM() {
                                     CAT_UI.Button("[post网页]", {
                                         type: "link",
                                         onClick: () => {
-                                            window.open('https://gotify-post.zeabur.app?url=' + encodeURIComponent(webhookUrl) + "/message?token=" + encodeURIComponent(webhookToken), '_blank');
+                                            window.open('https://gotify-post.zeabur.app?url=' + encodeURIComponent(webhookUrl) + "/message?token=" + encodeURIComponent(postToken), '_blank');
                                         },
                                         style: {
                                             padding: "0 8px"
@@ -323,7 +324,7 @@ function DM() {
                                 ],
                                 { direction: "horizontal", size: "small" }
                             ),
-                            CAT_UI.Divider("使用说明"),
+                            CAT_UI.Divider("注意事项"),
                             CAT_UI.createElement(
                                 "p",
                                 {
@@ -335,7 +336,7 @@ function DM() {
                                         whiteSpace: "pre-line"
                                     }
                                 },
-                                "1. 配置好webhookUrl和webhookToken（即clientToken）后，点击运行状态按钮启动Gotify推送监听\n2. 根据需要开启或关闭语音播报功能\n3. 日志区域会显示最近的监控日志",
+                                "1. 配置好webhookUrl，webhookToken（即clientToken），postToken（即appToken）后，点击运行状态按钮启动Gotify推送监听\n2. 🔘[使用教程]里面有webhook-demo配置，可用于体验。注意：该配置仅供测试使用，如果需要长期使用，请自建Gotify服务\n3. 🔘[post网页]可以快速打开Gotify消息发送页面，方便测试",
                             ),
                             CAT_UI.Divider("webhook设置"),  // 带文本的分隔线
                             CAT_UI.createElement(
@@ -373,6 +374,28 @@ function DM() {
                                         value: webhookToken,
                                         onChange(val) {
                                             patchAllvalue({ webhookToken: val });
+                                        },
+                                        style: { flex: 1, marginBottom: "8px" }   // 占满剩余空间并加底部间距
+                                    }),
+                                ]
+                            ),
+
+
+                            CAT_UI.createElement(
+                                "div",
+                                {
+                                    style: {
+                                        display: "flex",          // 弹性布局
+                                        justifyContent: "space-between",  // 水平方向两端对齐
+                                        alignItems: "center",     // 垂直方向居中对齐
+                                    },
+                                },
+                                [   // 子元素数组
+                                    CAT_UI.Text("postToken："),  // 文本提示
+                                    CAT_UI.Input({          // 输入框
+                                        value: postToken,
+                                        onChange(val) {
+                                            patchAllvalue({ postToken: val });
                                         },
                                         style: { flex: 1, marginBottom: "8px" }   // 占满剩余空间并加底部间距
                                     }),
