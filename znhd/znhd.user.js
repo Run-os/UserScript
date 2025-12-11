@@ -2,7 +2,7 @@
 // @name        征纳互动人数和在线监控
 // @namespace   https://scriptcat.org/
 // @description 监控征纳互动等待人数和在线状态，支持语音播报和Gotify推送通知。详细配置请点击脚本猫面板中的设置按钮。详细说明见：
-// @version     25.12.09-4
+// @version     2.0
 // @author      runos
 // @match       https://znhd.hunan.chinatax.gov.cn:8443/*
 // @match       https://example.com/*
@@ -314,6 +314,23 @@ function DM() {
                                         type: "link",
                                         onClick: () => {
                                             window.open('https://gotify-post.zeabur.app?url=' + encodeURIComponent(webhookUrl) + "/message?token=" + encodeURIComponent(postToken), '_blank');
+                                        },
+                                        style: {
+                                            padding: "0 8px"
+                                            //蓝色字体
+                                            , color: "#1890ff", fontWeight: "bold"
+                                        }
+                                    }),
+                                    CAT_UI.Button("[生成配置]", {
+                                        type: "link",
+                                        onClick: () => {
+                                            // 生成新的配置并写入状态
+                                            const newWebhookUrl = "https://webhook-service.zeabur.app";
+                                            const newWebhookToken = Math.random().toString(36).substring(2, 15);
+                                            const newPostToken = btoa(newWebhookToken);
+                                            patchAllvalue({ webhookUrl: newWebhookUrl, webhookToken: newWebhookToken, postToken: newPostToken });
+                                            CAT_UI.Message.success('配置已生成，请保存');
+
                                         },
                                         style: {
                                             padding: "0 8px"
