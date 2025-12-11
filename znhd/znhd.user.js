@@ -309,6 +309,17 @@ function DM() {
                                             , color: "#1890ff", fontWeight: "bold"
                                         }
                                     }),
+                                    CAT_UI.Button("[post网页]", {
+                                        type: "link",
+                                        onClick: () => {
+                                            window.open('https://gotify-post.zeabur.app?url=' + encodeURIComponent(webhookUrl) + "/message?token=" + encodeURIComponent(webhookToken), '_blank');
+                                        },
+                                        style: {
+                                            padding: "0 8px"
+                                            //蓝色字体
+                                            , color: "#1890ff", fontWeight: "bold"
+                                        }
+                                    }),
                                 ],
                                 { direction: "horizontal", size: "small" }
                             ),
