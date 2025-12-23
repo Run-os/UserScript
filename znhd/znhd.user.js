@@ -2,7 +2,7 @@
 // @name        征纳互动人数和在线监控
 // @namespace   https://scriptcat.org/
 // @description 监控征纳互动等待人数和在线状态，支持语音播报和Gotify推送通知。详细配置请点击脚本猫面板中的设置按钮。详细说明见：
-// @version     25.12.23 v2.1.1
+// @version     25.12.23
 // @author      runos
 // @match       https://znhd.hunan.chinatax.gov.cn:8443/*
 // @match       https://example.com/*
@@ -18,20 +18,6 @@
 // @homepage    https://scriptcat.org/zh-CN/script-show-page/3650
 // @require     https://scriptcat.org/lib/1167/1.0.0/%E8%84%9A%E6%9C%AC%E7%8C%ABUI%E5%BA%93.js?sha384-jXdR3hCwnDJf53Ue6XHAi6tApeudgS/wXnMYBD/ZJcgge8Xnzu/s7bkEf2tPi2KS
 // ==/UserScript==
-
-// 暴露变量到全局，方便在浏览器控制台调试
-// 使用安全的命名空间，避免全局污染
-const ScriptCatMonitor = {
-    CAT_UI: CAT_UI,
-    React: React,
-    ReactDOM: ReactDOM,
-    jsxLoader: jsxLoader,
-    addLog: addLog
-};
-// 仅在开发环境下暴露到全局
-if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-    (window.unsafeWindow || window).ScriptCatMonitor = ScriptCatMonitor;
-}
 
 // ==========配置==========
 // 配置对象，集中管理可配置项
@@ -285,7 +271,12 @@ function DM() {
                             borderColor: !voiceEnabled ? "#990018" : "#007e44",
                         }
                     }),
-                ]
+                ],
+                {
+                    direction: "horizontal", // 横向排列（默认值，可省略）
+                    size: "middle", // 元素间间距（可选：small/middle/large，默认middle）
+                    style: { marginBottom: "8px" } // 可选：给这一行加底部间距，避免与下方元素拥挤
+                }
             ),
             // 按钮
             CAT_UI.Space(
@@ -305,7 +296,6 @@ function DM() {
                         onClick: () => {
                             // 生成二维码并显示
                             const url = 'https://gotify-post.zeabur.app?url=' + encodeURIComponent(webhookUrl) + "/message?token=" + encodeURIComponent(postToken);
-                            const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(url)}`;
 
                             // 创建模态框显示二维码（使用原生DOM方法）
                             const modalOverlay = document.createElement('div');
@@ -333,20 +323,38 @@ function DM() {
                                             `;
 
                             const modalTitle = document.createElement('h3');
-                            modalTitle.textContent = '正在加载二维码';
+                            modalTitle.textContent = '点击即可关闭';
                             modalTitle.style.cssText = 'margin-bottom: 20px;';
 
-                            const qrImage = document.createElement('img');
-                            qrImage.src = qrCodeUrl;
-                            qrImage.style.cssText = 'max-width: 200px; max-height: 200px;';
-                            modalTitle.textContent = '扫码打开链接';
+                            // 创建二维码容器
+                            const qrContainer = document.createElement('div');
+                            qrContainer.id = 'qrCodeContainer';
+                            qrContainer.style.cssText = 'width:200px;height:200px;margin:0 auto;';
 
+                            // 动态加载 QRCode 库
+                            const script = document.createElement('script');
+                            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
+                            script.onload = () => {
+                                // 生成二维码
+                                new QRCode(qrContainer, {
+                                    text: url,
+                                    width: 200,
+                                    height: 200
+                                });
+                            };
+                            document.head.appendChild(script);
 
                             // 组装模态框
                             modalContent.appendChild(modalTitle);
-                            modalContent.appendChild(qrImage);
-
+                            modalContent.appendChild(qrContainer);
                             modalOverlay.appendChild(modalContent);
+
+                            // 点击模态框任意位置关闭
+                            modalOverlay.addEventListener('click', () => {
+                                if (document.getElementById('qrCodeModal')) {
+                                    document.body.removeChild(modalOverlay);
+                                }
+                            });
 
                             // 添加到页面
                             document.body.appendChild(modalOverlay);
@@ -429,7 +437,7 @@ function DM() {
                                         whiteSpace: "pre-line"
                                     }
                                 },
-                                "1. 配置好webhookUrl，webhookToken（即clientToken），postToken（即appToken）后，点击运行状态按钮启动Gotify推送监听\n2. 🔘[使用教程]里面有webhook-demo配置，可用于体验。注意：该配置仅供测试使用，如果需要长期使用，请自建Gotify服务\n",
+                                "1. 配置好webhookUrl，webhookToken（即clientToken），postToken（即appToken）后，点击运行状态按钮启动Gotify推送监听\n2. 🔘[使用教程]里面可查看脚本详细介绍\n3. 🔘[生成配置]可以生成一个随机的测试配置，供临时使用。注意：该配置仅供测试使用，如果需要长期使用，请自建Gotify服务\n",
                             ),
                             CAT_UI.Divider("webhook设置"),  // 带文本的分隔线
                             CAT_UI.createElement(
