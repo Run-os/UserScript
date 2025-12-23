@@ -163,6 +163,19 @@ function DM() {
         };
     }, []);
 
+    // 初始化时检测webhook配置是否为空，为空则自动生成
+    CAT_UI.useEffect(() => {
+        // 检测webhookUrl和webhookToken是否为空
+        if (!webhookUrl || !webhookToken) {
+            // 执行生成配置的逻辑（与生成配置按钮相同）
+            const newWebhookUrl = "https://webhook-service.zeabur.app";
+            const newWebhookToken = Math.random().toString(36).substring(2, 15);
+            const newPostToken = btoa(newWebhookToken);
+            patchAllvalue({ webhookUrl: newWebhookUrl, webhookToken: newWebhookToken, postToken: newPostToken });
+            addLog('webhook配置为空，已自动生成配置', 'info');
+        }
+    }, []);
+
     // webhook 配置变化时自动应用最新连接状态
     CAT_UI.useEffect(() => {
         if (!getwebhookStatus) {
@@ -274,15 +287,89 @@ function DM() {
                     }),
                 ]
             ),
-
-            //设置抽屉
+            // 按钮
             CAT_UI.Space(
                 [
                     CAT_UI.Button("设置", {
                         type: "primary",
                         onClick: () => setVisible(true),  // 显示抽屉
                     }),
-                    // 抽屉组件
+                    CAT_UI.Button("常用语", {
+                        type: "primary",
+                        onClick() {
+                            setCommonPhrasesVisible(true);
+                        },
+                    }),
+                    CAT_UI.Button("post网页", {
+                        type: "primary",
+                        onClick: () => {
+                            // 生成二维码并显示
+                            const url = 'https://gotify-post.zeabur.app?url=' + encodeURIComponent(webhookUrl) + "/message?token=" + encodeURIComponent(postToken);
+                            const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(url)}`;
+
+                            // 创建模态框显示二维码（使用原生DOM方法）
+                            const modalOverlay = document.createElement('div');
+                            modalOverlay.id = 'qrCodeModal';
+                            modalOverlay.style.cssText = `
+                                                position: fixed;
+                                                top: 0;
+                                                left: 0;
+                                                width: 100%;
+                                                height: 100%;
+                                                backgroundColor: rgba(0, 0, 0, 0.5);
+                                                display: flex;
+                                                justify-content: center;
+                                                align-items: center;
+                                                z-index: 9999;
+                                                border-radius: 8px;
+                                            `;
+
+                            const modalContent = document.createElement('div');
+                            modalContent.style.cssText = `
+                                                backgroundColor: white;
+                                                padding: 20px;
+                                                border-radius: 8px;
+                                                text-align: center;
+                                            `;
+
+                            const modalTitle = document.createElement('h3');
+                            modalTitle.textContent = '正在加载二维码';
+                            modalTitle.style.cssText = 'margin-bottom: 20px;';
+
+                            const qrImage = document.createElement('img');
+                            qrImage.src = qrCodeUrl;
+                            qrImage.style.cssText = 'max-width: 200px; max-height: 200px;';
+                            modalTitle.textContent = '扫码打开链接';
+
+
+                            // 组装模态框
+                            modalContent.appendChild(modalTitle);
+                            modalContent.appendChild(qrImage);
+
+                            modalOverlay.appendChild(modalContent);
+
+                            // 添加到页面
+                            document.body.appendChild(modalOverlay);
+
+                            // 5秒后自动关闭
+                            setTimeout(() => {
+                                if (document.getElementById('qrCodeModal')) {
+                                    document.body.removeChild(modalOverlay);
+                                }
+                            }, 5000);
+                        }
+                    }
+                    ),
+                ],
+                {
+                    direction: "horizontal", // 横向排列（默认值，可省略）
+                    size: "middle", // 元素间间距（可选：small/middle/large，默认middle）
+                }
+            ),
+            //抽屉
+            CAT_UI.Space(
+                [
+                    // 设置抽屉组件
                     CAT_UI.Drawer(
                         // 抽屉内容
                         CAT_UI.createElement("div", { style: { textAlign: "left" } }, [
@@ -310,94 +397,16 @@ function DM() {
                                             , color: "#1890ff", fontWeight: "bold"
                                         }
                                     }),
-                                    CAT_UI.Button("[post网页]", {
-                                        type: "link",
-                                        onClick: () => {
-                                            // 生成二维码并显示
-                                            const url = 'https://gotify-post.zeabur.app?url=' + encodeURIComponent(webhookUrl) + "/message?token=" + encodeURIComponent(postToken);
-                                            const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(url)}`;
-                                            
-                                            // 创建模态框显示二维码（使用原生DOM方法）
-                                            const modalOverlay = document.createElement('div');
-                                            modalOverlay.id = 'qrCodeModal';
-                                            modalOverlay.style.cssText = `
-                                                position: fixed;
-                                                top: 0;
-                                                left: 0;
-                                                width: 100%;
-                                                height: 100%;
-                                                backgroundColor: rgba(0, 0, 0, 0.5);
-                                                display: flex;
-                                                justify-content: center;
-                                                align-items: center;
-                                                z-index: 9999;
-                                                border-radius: 8px;
-                                            `;
-                                            
-                                            const modalContent = document.createElement('div');
-                                            modalContent.style.cssText = `
-                                                backgroundColor: white;
-                                                padding: 20px;
-                                                border-radius: 8px;
-                                                text-align: center;
-                                            `;
-                                            
-                                            const modalTitle = document.createElement('h3');
-                                            modalTitle.textContent = 'QR Code';
-                                            modalTitle.style.cssText = 'margin-bottom: 20px;';
-                                            
-                                            const qrImage = document.createElement('img');
-                                            qrImage.src = qrCodeUrl;
-                                            qrImage.alt = 'QR Code';
-                                            qrImage.style.cssText = 'max-width: 200px; max-height: 200px;';
-                                            
-                                            const closeButton = document.createElement('button');
-                                            closeButton.textContent = '关闭';
-                                            closeButton.style.cssText = `
-                                                marginTop: 20px;
-                                                padding: 8px 16px;
-                                                backgroundColor: #1890ff;
-                                                color: white;
-                                                border: none;
-                                                borderRadius: 4px;
-                                                cursor: pointer;
-                                            `;
-                                            closeButton.onclick = () => {
-                                                document.body.removeChild(modalOverlay);
-                                            };
-                                            
-                                            // 组装模态框
-                                            modalContent.appendChild(modalTitle);
-                                            modalContent.appendChild(qrImage);
-                                            modalContent.appendChild(closeButton);
-                                            modalOverlay.appendChild(modalContent);
-                                            
-                                            // 添加到页面
-                                            document.body.appendChild(modalOverlay);
-                                            
-                                            // 5秒后自动关闭
-                                            setTimeout(() => {
-                                                if (document.getElementById('qrCodeModal')) {
-                                                    document.body.removeChild(modalOverlay);
-                                                }
-                                            }, 5000);
-                                        },
-                                        style: {
-                                            padding: "0 8px"
-                                            //蓝色字体
-                                            , color: "#1890ff", fontWeight: "bold"
-                                        }
-                                    }),
+
                                     CAT_UI.Button("[生成配置]", {
                                         type: "link",
                                         onClick: () => {
-                                            // 生成新的配置并写入状态
+                                            // 执行生成配置的逻辑（与生成配置按钮相同）
                                             const newWebhookUrl = "https://webhook-service.zeabur.app";
                                             const newWebhookToken = Math.random().toString(36).substring(2, 15);
                                             const newPostToken = btoa(newWebhookToken);
                                             patchAllvalue({ webhookUrl: newWebhookUrl, webhookToken: newWebhookToken, postToken: newPostToken });
-                                            CAT_UI.Message.success('配置已生成，请保存');
-
+                                            addLog('webhook配置为空，已自动生成配置', 'info');
                                         },
                                         style: {
                                             padding: "0 8px"
@@ -420,7 +429,7 @@ function DM() {
                                         whiteSpace: "pre-line"
                                     }
                                 },
-                                "1. 配置好webhookUrl，webhookToken（即clientToken），postToken（即appToken）后，点击运行状态按钮启动Gotify推送监听\n2. 🔘[使用教程]里面有webhook-demo配置，可用于体验。注意：该配置仅供测试使用，如果需要长期使用，请自建Gotify服务\n3. 🔘[post网页]可以快速打开Gotify消息发送页面，方便测试",
+                                "1. 配置好webhookUrl，webhookToken（即clientToken），postToken（即appToken）后，点击运行状态按钮启动Gotify推送监听\n2. 🔘[使用教程]里面有webhook-demo配置，可用于体验。注意：该配置仅供测试使用，如果需要长期使用，请自建Gotify服务\n",
                             ),
                             CAT_UI.Divider("webhook设置"),  // 带文本的分隔线
                             CAT_UI.createElement(
@@ -541,24 +550,7 @@ function DM() {
                             onOk: () => { setVisible(false); },  // 确定按钮回调
                             onCancel: () => { setVisible(false); },  // 取消按钮回调
                         }
-                    )
-                ],
-                {
-                    direction: "horizontal", // 横向排列（默认值，可省略）
-                    size: "middle", // 元素间间距（可选：small/middle/large，默认middle）
-                    style: { marginBottom: "8px" } // 可选：给这一行加底部间距，避免与下方元素拥挤
-                }
-            ),
-
-            // 常用语按钮和抽屉
-            CAT_UI.Space(
-                [
-                    CAT_UI.Button("常用语", {
-                        type: "primary",
-                        onClick() {
-                            setCommonPhrasesVisible(true);
-                        },
-                    }),
+                    ),
                     // 常用语抽屉组件
                     CAT_UI.Drawer(
                         // 抽屉内容
@@ -641,8 +633,12 @@ function DM() {
                             onOk: () => { setCommonPhrasesVisible(false); },
                             onCancel: () => { setCommonPhrasesVisible(false); },
                         }
-                    )
-                ]
+                    ),
+                ],
+                {
+                    direction: "horizontal", // 横向排列（默认值，可省略）
+                    size: "middle", // 元素间间距（可选：small/middle/large，默认middle）
+                }
             ),
         ],
         { direction: "vertical" }  // 垂直排列
@@ -651,12 +647,7 @@ function DM() {
 
 CAT_UI.createPanel({
     // 强制固定Drawer和Panel位置
-    appendStyle: `.arco-drawer-wrapper {
-    position: fixed !important;
-  }
-  .scriptcat-panel {
-    position: fixed !important;
-  }`,
+
     header: {
         title: CAT_UI.Space(
             [
@@ -683,9 +674,6 @@ CAT_UI.createPanel({
     },
 
 });
-
-
-
 
 // ==========监控部分==========
 // 工具函数：获取当前小时（支持小数）
@@ -1011,9 +999,13 @@ function connectGotifyWebSocket(webhookUrl, webhookToken) {
         }
     };
     gotifyWS.onerror = (error) => {
-        CAT_UI.Message.error('Gotify WebSocket 发生错误，查看控制台详情');
         console.error('[Gotify] WebSocket 错误:', error);
-        addLog('Gotify WebSocket 发生错误，查看控制台详情', 'error');
+        addLog('Gotify WebSocket 发生错误，将尝试重连', 'warning');
+        // 错误发生后尝试重连
+        gotifyWS = null;
+        if (gotifyEnabled && !gotifyReconnectTimer) {
+            gotifyReconnectTimer = setTimeout(() => connectGotifyWebSocket(webhookUrl, webhookToken), GOTIFY_RECONNECT_INTERVAL);
+        }
     };
     gotifyWS.onclose = (event) => {
         CAT_UI.Message.error('Gotify WebSocket 连接关闭');
