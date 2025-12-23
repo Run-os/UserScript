@@ -2,7 +2,7 @@
 // @name        征纳互动人数和在线监控
 // @namespace   https://scriptcat.org/
 // @description 监控征纳互动等待人数和在线状态，支持语音播报和Gotify推送通知。详细配置请点击脚本猫面板中的设置按钮。详细说明见：
-// @version     25.12.12 v2.0.1
+// @version     25.12.23 v2.1.1
 // @author      runos
 // @match       https://znhd.hunan.chinatax.gov.cn:8443/*
 // @match       https://example.com/*
@@ -313,7 +313,74 @@ function DM() {
                                     CAT_UI.Button("[post网页]", {
                                         type: "link",
                                         onClick: () => {
-                                            window.open('https://gotify-post.zeabur.app?url=' + encodeURIComponent(webhookUrl) + "/message?token=" + encodeURIComponent(postToken), '_blank');
+                                            // 生成二维码并显示
+                                            const url = 'https://gotify-post.zeabur.app?url=' + encodeURIComponent(webhookUrl) + "/message?token=" + encodeURIComponent(postToken);
+                                            const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(url)}`;
+                                            
+                                            // 创建模态框显示二维码（使用原生DOM方法）
+                                            const modalOverlay = document.createElement('div');
+                                            modalOverlay.id = 'qrCodeModal';
+                                            modalOverlay.style.cssText = `
+                                                position: fixed;
+                                                top: 0;
+                                                left: 0;
+                                                width: 100%;
+                                                height: 100%;
+                                                backgroundColor: rgba(0, 0, 0, 0.5);
+                                                display: flex;
+                                                justify-content: center;
+                                                align-items: center;
+                                                z-index: 9999;
+                                                border-radius: 8px;
+                                            `;
+                                            
+                                            const modalContent = document.createElement('div');
+                                            modalContent.style.cssText = `
+                                                backgroundColor: white;
+                                                padding: 20px;
+                                                border-radius: 8px;
+                                                text-align: center;
+                                            `;
+                                            
+                                            const modalTitle = document.createElement('h3');
+                                            modalTitle.textContent = 'QR Code';
+                                            modalTitle.style.cssText = 'margin-bottom: 20px;';
+                                            
+                                            const qrImage = document.createElement('img');
+                                            qrImage.src = qrCodeUrl;
+                                            qrImage.alt = 'QR Code';
+                                            qrImage.style.cssText = 'max-width: 200px; max-height: 200px;';
+                                            
+                                            const closeButton = document.createElement('button');
+                                            closeButton.textContent = '关闭';
+                                            closeButton.style.cssText = `
+                                                marginTop: 20px;
+                                                padding: 8px 16px;
+                                                backgroundColor: #1890ff;
+                                                color: white;
+                                                border: none;
+                                                borderRadius: 4px;
+                                                cursor: pointer;
+                                            `;
+                                            closeButton.onclick = () => {
+                                                document.body.removeChild(modalOverlay);
+                                            };
+                                            
+                                            // 组装模态框
+                                            modalContent.appendChild(modalTitle);
+                                            modalContent.appendChild(qrImage);
+                                            modalContent.appendChild(closeButton);
+                                            modalOverlay.appendChild(modalContent);
+                                            
+                                            // 添加到页面
+                                            document.body.appendChild(modalOverlay);
+                                            
+                                            // 5秒后自动关闭
+                                            setTimeout(() => {
+                                                if (document.getElementById('qrCodeModal')) {
+                                                    document.body.removeChild(modalOverlay);
+                                                }
+                                            }, 5000);
                                         },
                                         style: {
                                             padding: "0 8px"
