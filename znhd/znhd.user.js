@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name        征纳互动人数和在线监控
 // @namespace   https://scriptcat.org/
-// @description 监控征纳互动等待人数和在线状态，支持语音播报和Gotify推送通知。详细配置请点击脚本猫面板中的设置按钮。详细说明见：
-// @version     25.12.23
+// @description 监控征纳互动等待人数和在线状态，支持语音播报和webhook推送通知。
+// @version     25.12.24
 // @author      runos
 // @match       https://znhd.hunan.chinatax.gov.cn:8443/*
 // @match       https://example.com/*
@@ -11,10 +11,8 @@
 // @grant       unsafeWindow
 // @grant       GM_xmlhttpRequest
 // @grant       GM_setClipboard
-// @connect     sct.icodef.com
-// @connect     file.122050.xyz
-// @connect     *
 // @grant       GM_notification
+// @connect     *
 // @homepage    https://scriptcat.org/zh-CN/script-show-page/3650
 // @require     https://scriptcat.org/lib/1167/1.0.0/%E8%84%9A%E6%9C%AC%E7%8C%ABUI%E5%BA%93.js?sha384-jXdR3hCwnDJf53Ue6XHAi6tApeudgS/wXnMYBD/ZJcgge8Xnzu/s7bkEf2tPi2KS
 // ==/UserScript==
@@ -295,7 +293,7 @@ function DM() {
                         type: "primary",
                         onClick: () => {
                             // 生成二维码并显示
-                            const url = 'https://gotify-post.zeabur.app?url=' + encodeURIComponent(webhookUrl) + "/message?token=" + encodeURIComponent(postToken);
+                            const url = 'https://webhook-post.zeabur.app?url=' + encodeURIComponent(webhookUrl) + "/message?token=" + encodeURIComponent(postToken);
 
                             // 创建模态框显示二维码（使用原生DOM方法）
                             const modalOverlay = document.createElement('div');
@@ -437,7 +435,7 @@ function DM() {
                                         whiteSpace: "pre-line"
                                     }
                                 },
-                                "1. 配置好webhookUrl，webhookToken（即clientToken），postToken（即appToken）后，点击运行状态按钮启动Gotify推送监听\n2. 🔘[使用教程]里面可查看脚本详细介绍\n3. 🔘[生成配置]可以生成一个随机的测试配置，供临时使用。注意：该配置仅供测试使用，如果需要长期使用，请自建Gotify服务\n",
+                                "1. 配置好webhookUrl，webhookToken（即clientToken），postToken（即appToken）后，点击运行状态按钮启动webhook推送监听\n2. 🔘[使用教程]里面可查看脚本详细介绍\n3. 🔘[生成配置]可以生成一个随机的测试配置，供临时使用。注意：该配置仅供测试使用，如果需要长期使用，请自建webhook服务\n",
                             ),
                             CAT_UI.Divider("webhook设置"),  // 带文本的分隔线
                             CAT_UI.createElement(
@@ -617,10 +615,13 @@ function DM() {
                                             CAT_UI.Button(key, {
                                                 type: "default",
                                                 onClick() {
-                                                    safeCopyText(value);
-                                                    CAT_UI.Message.success("已复制: " + key);
-                                                    addLog(`常用语已复制: ${key}`, 'success');
+                                                    //safeCopyText(value);
+                                                    //CAT_UI.Message.success("已复制: " + key);
                                                     setCommonPhrasesVisible(false);
+                                                    // 2. 把 value 追加到 TinyMCE 已有内容后面
+                                                    appendToTinyMCE(value);
+                                                    addLog(`添加文本: ${value}`, 'success');
+                                                    CAT_UI.Message.success("添加文本: " + value);
                                                 },
                                                 style: { marginBottom: "8px", width: "100%" }
                                             })
@@ -754,6 +755,25 @@ function checkCount() {
     }
 }
 
+/* 工具函数：往 TinyMCE 追加文本 */
+function appendToTinyMCE(textToAppend) {
+    const f = document.querySelector('.input-box iframe.tox-edit-area__iframe');
+    if (!f) { console.error('❌ 找不到 TinyMCE iframe'); return; }
+
+    const body = f.contentDocument.querySelector('body#tinymce');
+    const newText = body.textContent + textToAppend;
+
+    // 直接改 DOM
+    body.textContent = newText;
+
+    // 如果希望进入撤销栈，再调用一次官方 API
+    if (window.tinymce && tinymce.activeEditor) {
+        tinymce.activeEditor.setContent(newText);
+    }
+
+    console.log('追加后文本：', newText);
+}
+
 // 语音播报函数
 const speechQueue = [];
 let isSpeaking = false;
@@ -814,12 +834,12 @@ function startMonitoring() {
 }
 
 
-// ========== Gotify WebSocket 推送集成 ==========
-let gotifyWS = null;
-let gotifyReconnectTimer = null;
-const GOTIFY_RECONNECT_INTERVAL = 3000;
-let gotifyEnabled = false; // 控制是否允许重连
-let gotifyConfigKey = '';
+// ========== webhook WebSocket 推送集成 ==========
+let webhookWS = null;
+let webhookReconnectTimer = null;
+const webhook_RECONNECT_INTERVAL = 3000;
+let webhookEnabled = false; // 控制是否允许重连
+let webhookConfigKey = '';
 
 // 安全复制工具：仅在页面聚焦且支持 clipboard 时尝试复制
 function safeCopyText(text) {
@@ -828,25 +848,25 @@ function safeCopyText(text) {
     if (typeof GM_setClipboard === 'function') {
         try {
             GM_setClipboard(text);
-            console.log('[Gotify] 已复制到剪贴板 (GM_setClipboard)');
+            console.log('[webhook] 已复制到剪贴板 (GM_setClipboard)');
             const player = new Audio();
             player.src = CONFIG.didaUrl;
             player.play();
             return;
         } catch (e) {
-            console.error('[Gotify] GM_setClipboard 失败，尝试浏览器 API:', e);
+            console.error('[webhook] GM_setClipboard 失败，尝试浏览器 API:', e);
         }
     }
 
     // 2) 浏览器异步 clipboard API
     if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
         navigator.clipboard.writeText(text).then(() => {
-            console.log('[Gotify] 已复制到剪贴板 (navigator.clipboard)');
+            console.log('[webhook] 已复制到剪贴板 (navigator.clipboard)');
             const player = new Audio();
             player.src = CONFIG.didaUrl;
             player.play();
         }).catch(err => {
-            console.error('[Gotify] 复制到剪贴板失败，结束:', err);
+            console.error('[webhook] 复制到剪贴板失败，结束:', err);
         });
         return;
     }
@@ -885,7 +905,7 @@ async function convertImageBlobToPng(blob) {
         ctx.drawImage(bitmap, 0, 0);
         return await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
     } catch (err) {
-        console.error('[Gotify] 转换图片为 PNG 失败:', err);
+        console.error('[webhook] 转换图片为 PNG 失败:', err);
         return blob; // 退化：返回原始 blob 继续尝试
     }
 }
@@ -908,7 +928,7 @@ async function copyBase64ImageToClipboard(text) {
                 addLog('图片已复制到剪贴板', 'success');
                 return true;
             } catch (clipErr) {
-                console.error('[Gotify] Clipboard API 图片写入失败:', clipErr);
+                console.error('[webhook] Clipboard API 图片写入失败:', clipErr);
             }
         }
 
@@ -923,145 +943,149 @@ async function copyBase64ImageToClipboard(text) {
                 addLog('图片已复制到剪贴板 (GM_setClipboard)', 'success');
                 return true;
             } catch (gmErr) {
-                console.error('[Gotify] GM_setClipboard 图片写入失败:', gmErr);
+                console.error('[webhook] GM_setClipboard 图片写入失败:', gmErr);
             }
         }
 
         addLog('当前环境不支持图片剪贴板写入', 'warning');
         return false;
     } catch (err) {
-        console.error('[Gotify] 复制图片到剪贴板失败:', err);
+        console.error('[webhook] 复制图片到剪贴板失败:', err);
         addLog(`复制图片到剪贴板失败: ${err && err.message ? err.message : '未知错误'}`, 'error');
         return false;
     }
 }
 
-function connectGotifyWebSocket(webhookUrl, webhookToken) {
-    if (gotifyReconnectTimer) {
-        clearTimeout(gotifyReconnectTimer);
-        gotifyReconnectTimer = null;
+function connectwebhookWebSocket(webhookUrl, webhookToken) {
+    if (webhookReconnectTimer) {
+        clearTimeout(webhookReconnectTimer);
+        webhookReconnectTimer = null;
     }
     if (!webhookUrl || !webhookToken) {
-        gotifyEnabled = false;
-        CAT_UI.Message.warning('未配置 Gotify webhookUrl 或 webhookToken，跳过推送监听');
-        console.warn('未配置 Gotify webhookUrl 或 webhookToken，跳过推送监听');
+        webhookEnabled = false;
+        CAT_UI.Message.warning('未配置 webhook webhookUrl 或 webhookToken，跳过推送监听');
+        console.warn('未配置 webhook webhookUrl 或 webhookToken，跳过推送监听');
         // 关闭可能存在的旧连接，避免使用过期配置重连
-        if (gotifyWS) {
-            try { gotifyWS.close(1000, '配置缺失，停止推送'); } catch (e) { }
-            gotifyWS = null;
+        if (webhookWS) {
+            try { webhookWS.close(1000, '配置缺失，停止推送'); } catch (e) { }
+            webhookWS = null;
         }
         return;
     }
     const configKey = `${webhookUrl}|${webhookToken}`;
     // 如果当前配置已在连接中或已连接，避免重复创建导致的闪断
-    if (gotifyWS && (gotifyWS.readyState === WebSocket.CONNECTING || gotifyWS.readyState === WebSocket.OPEN) && gotifyConfigKey === configKey) {
+    if (webhookWS && (webhookWS.readyState === WebSocket.CONNECTING || webhookWS.readyState === WebSocket.OPEN) && webhookConfigKey === configKey) {
         return;
     }
 
-    gotifyEnabled = true;
-    gotifyConfigKey = configKey;
+    webhookEnabled = true;
+    webhookConfigKey = configKey;
     // 关闭已有连接
-    if (gotifyWS) {
-        try { gotifyWS.close(1000, '重连'); } catch (e) { }
-        gotifyWS = null;
+    if (webhookWS) {
+        try { webhookWS.close(1000, '重连'); } catch (e) { }
+        webhookWS = null;
     }
     // 构造 ws 地址
     try {
         const urlObj = new URL('/stream', webhookUrl.replace(/\/$/, ''));
         urlObj.protocol = urlObj.protocol === 'https:' ? 'wss:' : 'ws:';
         urlObj.searchParams.set('token', webhookToken);
-        gotifyWS = new window.WebSocket(urlObj.href);
-        console.log('[Gotify] 尝试连接: ', urlObj.href);
+        webhookWS = new window.WebSocket(urlObj.href);
+        console.log('[webhook] 尝试连接: ', urlObj.href);
     } catch (e) {
-        console.error('[Gotify] 地址格式错误:', e);
+        console.error('[webhook] 地址格式错误:', e);
         return;
     }
-    gotifyWS.onopen = () => {
-        CAT_UI.Message.success('Gotify WebSocket 连接成功');
-        console.log('[Gotify] WebSocket 连接成功');
-        addLog('Gotify 推送监听已启动', 'success');
+    webhookWS.onopen = () => {
+        CAT_UI.Message.success('webhook WebSocket 连接成功');
+        console.log('[webhook] WebSocket 连接成功');
+        addLog('webhook 推送监听已启动', 'success');
     };
-    gotifyWS.onmessage = async (event) => {
+    webhookWS.onmessage = async (event) => {
         try {
-
+            // 解析 JSON 消息
             const msg = JSON.parse(event.data);
             const { id, title, message: text, priority, date } = msg;
-            CAT_UI.Message.success(`收到Gotify推送：${text}`);
-            console.log('[Gotify] 收到消息:', msg);
-
+            //CAT_UI.Message.success(`收到webhook推送：${text}`);
+            console.log('[webhook] 收到消息:', msg);
+            // 处理图片消息
             if (text && isBase64ImageString(text)) {
                 const copied = await copyBase64ImageToClipboard(text);
-                addLog(copied ? 'Gotify消息：图片已复制到剪贴板' : 'Gotify消息：图片复制失败，已保留原文', copied ? 'success' : 'warning');
-                if (!copied && text) {
-                    safeCopyText(text);
+                if (copied && text) {
+                    CAT_UI.Message.success('webhook消息：图片已复制到剪贴板', 'success');
+                    addLog('webhook消息：图片已复制到剪贴板', 'success');
+                } else if (!copied && text) {
+                    CAT_UI.Message.warning(`webhook消息：图片复制失败，已保留原文：${text}`);
+                    addLog(`webhook消息：图片复制失败，已保留原文：${text}`, 'warning');
                 }
                 return;
             }
-
+            // 处理文本消息
             if (text) {
                 safeCopyText(text);
-                addLog(`Gotify消息：${text}`, 'success');
+                appendToTinyMCE(text);
+                addLog(`webhook消息：${text}`, 'success');
             }
         } catch (err) {
-            console.error('[Gotify] 消息解析失败:', err, event.data);
+            console.error('[webhook] 消息解析失败:', err, event.data);
         }
     };
-    gotifyWS.onerror = (error) => {
-        console.error('[Gotify] WebSocket 错误:', error);
-        addLog('Gotify WebSocket 发生错误，将尝试重连', 'warning');
+    webhookWS.onerror = (error) => {
+        console.error('[webhook] WebSocket 错误:', error);
+        addLog('webhook WebSocket 发生错误，将尝试重连', 'warning');
         // 错误发生后尝试重连
-        gotifyWS = null;
-        if (gotifyEnabled && !gotifyReconnectTimer) {
-            gotifyReconnectTimer = setTimeout(() => connectGotifyWebSocket(webhookUrl, webhookToken), GOTIFY_RECONNECT_INTERVAL);
+        webhookWS = null;
+        if (webhookEnabled && !webhookReconnectTimer) {
+            webhookReconnectTimer = setTimeout(() => connectwebhookWebSocket(webhookUrl, webhookToken), webhook_RECONNECT_INTERVAL);
         }
     };
-    gotifyWS.onclose = (event) => {
-        CAT_UI.Message.error('Gotify WebSocket 连接关闭');
-        addLog('Gotify WebSocket 连接关闭', 'warning');
-        gotifyWS = null;
-        if (!gotifyEnabled) { return; }
-        if (gotifyReconnectTimer) clearTimeout(gotifyReconnectTimer);
-        gotifyReconnectTimer = setTimeout(() => connectGotifyWebSocket(webhookUrl, webhookToken), GOTIFY_RECONNECT_INTERVAL);
+    webhookWS.onclose = (event) => {
+        CAT_UI.Message.error('webhook WebSocket 连接关闭');
+        addLog('webhook WebSocket 连接关闭', 'warning');
+        webhookWS = null;
+        if (!webhookEnabled) { return; }
+        if (webhookReconnectTimer) clearTimeout(webhookReconnectTimer);
+        webhookReconnectTimer = setTimeout(() => connectwebhookWebSocket(webhookUrl, webhookToken), webhook_RECONNECT_INTERVAL);
     };
 }
 
-// 初始化 Gotify 监听（根据配置）
+// 初始化 webhook 监听（根据配置）
 function initwebhookCatDevice(enabled, webhookUrl, webhookToken) {
     if (!enabled) {
-        gotifyEnabled = false;
-        gotifyConfigKey = '';
-        if (gotifyWS) {
-            try { gotifyWS.close(1000, '手动关闭'); } catch (e) { }
-            gotifyWS = null;
+        webhookEnabled = false;
+        webhookConfigKey = '';
+        if (webhookWS) {
+            try { webhookWS.close(1000, '手动关闭'); } catch (e) { }
+            webhookWS = null;
         }
-        if (gotifyReconnectTimer) {
-            clearTimeout(gotifyReconnectTimer);
-            gotifyReconnectTimer = null;
+        if (webhookReconnectTimer) {
+            clearTimeout(webhookReconnectTimer);
+            webhookReconnectTimer = null;
         }
         return;
     }
 
     if (!webhookUrl || !webhookToken) {
-        gotifyEnabled = false;
-        gotifyConfigKey = '';
-        CAT_UI.Message.warning('未配置 Gotify webhookUrl 或 webhookToken，未启动推送监听');
-        if (gotifyWS) {
-            try { gotifyWS.close(1000, '配置缺失，停止推送'); } catch (e) { }
-            gotifyWS = null;
+        webhookEnabled = false;
+        webhookConfigKey = '';
+        CAT_UI.Message.warning('未配置 webhook webhookUrl 或 webhookToken，未启动推送监听');
+        if (webhookWS) {
+            try { webhookWS.close(1000, '配置缺失，停止推送'); } catch (e) { }
+            webhookWS = null;
         }
-        if (gotifyReconnectTimer) {
-            clearTimeout(gotifyReconnectTimer);
-            gotifyReconnectTimer = null;
+        if (webhookReconnectTimer) {
+            clearTimeout(webhookReconnectTimer);
+            webhookReconnectTimer = null;
         }
         return;
     }
 
-    connectGotifyWebSocket(webhookUrl, webhookToken);
+    connectwebhookWebSocket(webhookUrl, webhookToken);
 }
 
 // 页面关闭时断开连接
 window.addEventListener('unload', () => {
-    if (gotifyWS) try { gotifyWS.close(1000, '页面关闭'); } catch (e) { }
+    if (webhookWS) try { webhookWS.close(1000, '页面关闭'); } catch (e) { }
 });
 
 if (document.readyState === 'loading') {
