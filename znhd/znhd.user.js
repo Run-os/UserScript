@@ -293,7 +293,7 @@ function DM() {
                         type: "primary",
                         onClick: () => {
                             // 生成二维码并显示
-                            const url = 'https://webhook-post.zeabur.app?url=' + encodeURIComponent(webhookUrl) + "/message?token=" + encodeURIComponent(postToken);
+                            const url = 'https://gotify-post.zeabur.app?url=' + encodeURIComponent(webhookUrl) + "/message?token=" + encodeURIComponent(postToken);
 
                             // 创建模态框显示二维码（使用原生DOM方法）
                             const modalOverlay = document.createElement('div');
