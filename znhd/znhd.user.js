@@ -2,7 +2,7 @@
 // @name        征纳互动人数和在线监控
 // @namespace   https://scriptcat.org/
 // @description 实施监控征纳互动等待人数和在线状态，支持语音播报、webhook推送文本和图片、自定义常用语
-// @version     25.12.24
+// @version     25.12.25
 // @author      runos
 // @match       https://znhd.hunan.chinatax.gov.cn:8443/*
 // @match       https://example.com/*
@@ -758,20 +758,24 @@ function checkCount() {
 /* 工具函数：往 TinyMCE 追加文本 */
 function appendToTinyMCE(textToAppend) {
     const f = document.querySelector('.input-box iframe.tox-edit-area__iframe');
-    if (!f) { console.error('❌ 找不到 TinyMCE iframe'); return; }
+    if (f) {
+        const body = f.contentDocument.querySelector('body#tinymce');
+        const newText = body.textContent + textToAppend;
 
-    const body = f.contentDocument.querySelector('body#tinymce');
-    const newText = body.textContent + textToAppend;
+        // 直接改 DOM
+        body.textContent = newText;
 
-    // 直接改 DOM
-    body.textContent = newText;
+        // 如果希望进入撤销栈，再调用一次官方 API
+        if (window.tinymce && tinymce.activeEditor) {
+            tinymce.activeEditor.setContent(newText);
+        }
 
-    // 如果希望进入撤销栈，再调用一次官方 API
-    if (window.tinymce && tinymce.activeEditor) {
-        tinymce.activeEditor.setContent(newText);
+        console.log('追加后文本：', newText);
+    } else {
+        console.error('❌ 找不到 TinyMCE iframe, 无法追加文本, 已安全复制到剪贴板');
+        safeCopyText(textToAppend);
+        return;
     }
-
-    console.log('追加后文本：', newText);
 }
 
 // 语音播报函数
