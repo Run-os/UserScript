@@ -18,21 +18,32 @@
         return;
     }
 
-    // 初始化日期，默认设置为昨天
-    var time = new Date();
-    time.setDate(time.getDate() - 1);
+    // 初始化日期，默认设置为昨天（合并为一行）
+    var time = new Date(); time.setDate(time.getDate() - 1);
 
-    // 日期格式化函数
+    /**
+     * 格式化日期为 YYYY-MM-DD 格式（确保月份和日期为两位数）
+     * @param {Date|number|string} date - 要格式化的日期（Date对象/时间戳/日期字符串）
+     * @returns {string} 格式化后的日期字符串，格式为 YYYY-MM-DD
+     */
     function formatDate(date) {
-        var d = new Date(date),
-            month = '' + (d.getMonth() + 1),
-            day = '' + d.getDate(),
-            year = d.getFullYear();
+        // 处理入参，统一转为 Date 对象
+        const targetDate = new Date(date);
 
-        if (month.length < 2) month = '0' + month;
-        if (day.length < 2) day = '0' + day;
+        // 校验日期有效性
+        if (isNaN(targetDate.getTime())) {
+            throw new Error('传入的参数不是有效的日期');
+        }
 
-        return [year, month, day].join('-');
+        // 获取年、月、日（月份从 0 开始，需要 +1）
+        const year = targetDate.getFullYear();
+        // 补零：确保月份是两位数（如 1 → 01）
+        const month = String(targetDate.getMonth() + 1).padStart(2, '0');
+        // 补零：确保日期是两位数（如 5 → 05）
+        const day = String(targetDate.getDate()).padStart(2, '0');
+
+        // 拼接成 YYYY-MM-DD 格式
+        return `${year}-${month}-${day}`;
     }
 
     // 核心功能函数
@@ -149,7 +160,9 @@
             }
         `;
 
-        /* 样式应用 */
+        /* 
+        * 样式应用
+        */
         iframeDoc.head.appendChild(style);
 
         // 添加标题（轻量化样式）
@@ -202,7 +215,11 @@
         iframeDoc.body.appendChild(closeButton);
 
 
-        /* 按钮点击事件 */
+        /*
+        * 按钮点击事件
+        * 点击①：核心数据填充功能
+        * 点击②：上传附件
+        */
         // 按钮点击事件：点击①（核心数据填充功能）
         runButton.addEventListener('click', function () {
             // 1. 查找名称以'KJD'开头的iframe（目标业务iframe）
@@ -284,7 +301,7 @@
             }
         });
 
-        // 按钮点击事件：点击②（文件操作与后续流程触发）
+        // 按钮点击事件：点击②（上传附件）
         runButton2.addEventListener('click', function () {
             // 1. 查找id为'bu'的按钮元素（通常为下一步/继续按钮）
             var continuebut = document.querySelector("#bu");
@@ -309,7 +326,7 @@
                 // 5. 获取iframe内部的文档对象（兼容不同浏览器）
                 var continueiframeDocument = continueiframe.contentDocument || continueiframe.contentWindow.document;
 
-                // 6. 在iframe内部查找id为'file'的文件输入元素
+                // 6. 在iframe内部查找id为'file'的文件输入元素（上传附件）
                 var continuefile = continueiframeDocument.querySelector("#file");
 
                 // 7. 如果找到文件输入元素，则自动触发点击事件（打开文件选择对话框）
