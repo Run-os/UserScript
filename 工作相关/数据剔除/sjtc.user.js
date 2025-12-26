@@ -1,9 +1,10 @@
 // ==UserScript==
 // @name         数据剔除
 // @namespace    http://tampermonkey.net/
-// @version      1.1
-// @description  自动创建可拖动控制面板，填充指定日期到目标输入框，并支持日期递增与面板关闭（现代化轻量化UI）
-// @author       Your Name
+// @version      1.2
+// @description  自动创建控制面板，填充指定日期到目标输入框，并支持日期递增与面板关闭（现代化轻量化UI）
+// @author       runos
+// @match        https://www.sjtc.gov.cn/*
 // @match        https://example.com/*
 // @grant        none
 // @run-at       document-end
@@ -11,6 +12,11 @@
 
 (function () {
     'use strict';
+
+    // 检查是否在顶层窗口，如果是iframe则不执行
+    if (window.self !== window.top) {
+        return;
+    }
 
     // 初始化日期，默认设置为昨天
     var time = new Date();
@@ -45,7 +51,6 @@
             backgroundColor: 'rgba(255, 255, 255, 0.85)', // 浅色系更显现代，同时保证通透
             boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)', // 柔和阴影，提升层次感
             borderRadius: '16px', // 圆润边角，更具现代感
-            cursor: 'move',
             overflow: 'hidden' // 隐藏溢出内容，保持整洁
         });
         document.body.appendChild(iframe);
@@ -143,6 +148,8 @@
                 margin: 4px 0;
             }
         `;
+
+        /* 样式应用 */
         iframeDoc.head.appendChild(style);
 
         // 添加标题（轻量化样式）
@@ -194,68 +201,53 @@
         closeButton.style.gridColumn = '1 / 3';
         iframeDoc.body.appendChild(closeButton);
 
-        // 使iframe可拖动（保留原有功能，优化流畅度）
-        let isDragging = false;
-        let offsetX, offsetY;
 
-        iframe.addEventListener('mousedown', function (e) {
-            // 避免点击按钮时触发拖动
-            if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT') {
-                return;
-            }
-            isDragging = true;
-            offsetX = e.clientX - iframe.getBoundingClientRect().left;
-            offsetY = e.clientY - iframe.getBoundingClientRect().top;
-            iframe.style.transition = 'none';
-            // 拖动时提升层级，避免被遮挡
-            iframe.style.zIndex = '10000';
-        });
-
-        document.addEventListener('mousemove', function (e) {
-            if (isDragging) {
-                iframe.style.left = `${e.clientX - offsetX}px`;
-                iframe.style.top = `${e.clientY - offsetY}px`;
-                iframe.style.right = 'auto';
-                iframe.style.bottom = 'auto';
-            }
-        });
-
-        document.addEventListener('mouseup', function () {
-            if (isDragging) {
-                isDragging = false;
-                iframe.style.transition = 'all 0.2s ease';
-                iframe.style.zIndex = '9999';
-            }
-        });
-
-        // 按钮点击事件：点击①（保留原有功能）
+        /* 按钮点击事件 */
+        // 按钮点击事件：点击①（核心数据填充功能）
         runButton.addEventListener('click', function () {
+            // 1. 查找名称以'KJD'开头的iframe（目标业务iframe）
             var entryiframe = document.querySelector("iframe[name^='KJD']");
+
+            // 2. 检查是否找到目标iframe，未找到则退出并打印日志
             if (!entryiframe) {
                 console.log("没有找到符合条件的iframe");
                 return;
             }
+
+            // 3. 获取iframe内部的文档对象（兼容不同浏览器）
             const iframeDocument = entryiframe.contentDocument || entryiframe.contentWindow.document;
 
+            // 4. 查找所有id为'sendDate'的输入框元素
             var sendDates = iframeDocument.querySelectorAll("#sendDate");
+
+            // 5. 如果找到sendDate元素，则执行数据填充操作
             if (sendDates.length > 0) {
                 console.log("sendDates的数量：", sendDates.length);
+
+                // 5.1 为所有sendDate输入框填充当前格式化后的日期
                 sendDates.forEach(function (sendDate) {
                     sendDate.value = formatDate(time);
                 });
 
+                // 5.2 查找所有id为'jsSj'的输入框元素
                 var sendDates2 = iframeDocument.querySelectorAll("#jsSj");
                 console.log("sendDates2的数量：", sendDates2.length);
+
+                // 5.3 为所有jsSj输入框填充当前格式化后的日期
                 sendDates2.forEach(function (sendDate) {
                     sendDate.value = formatDate(time);
                 });
 
+                // 5.4 查找id为'sendTitle'的下拉选择框
                 var selectitle = iframeDocument.querySelector("#sendTitle");
                 if (selectitle) {
+                    // 5.4.1 遍历下拉选项，查找文本为'线上业务剔除报备'的选项
                     var options = selectitle.options;
                     for (var j = 0; j < options.length; j++) {
                         if (options[j].text === '线上业务剔除报备') {
+                            // 5.4.2 选中该选项
                             selectitle.selectedIndex = j;
+                            // 5.4.3 创建并触发change事件，确保页面响应选择变化
                             var event = new Event('change', { bubbles: true });
                             selectitle.dispatchEvent(event);
                             break;
@@ -263,51 +255,82 @@
                     }
                 }
 
+                // 5.5 查找id为'ysyy'的下拉选择框
                 var selecysyy = iframeDocument.querySelector("#ysyy");
                 if (selecysyy) {
+                    // 5.5.1 选中索引为3的选项（通常为预设的原因选项）
                     selecysyy.selectedIndex = 3;
                 }
 
+                // 5.6 查找所有id为'jxxx'的文本输入框
                 var whyList = iframeDocument.querySelectorAll("#jxxx");
+
+                // 5.6.1 为所有jxxx输入框填充固定的原因文本
                 whyList.forEach(function (why) {
                     why.value = "由于系统原因，部分业务无法网上办理，只能在线下窗口办理。";
                 });
 
+                // 6. 将当前日期自动增加1天（为下一次操作做准备）
                 time.setDate(time.getDate() + 1);
+
+                // 7. 更新控制面板中的日期选择器显示
                 datePicker.value = formatDate(time);
+
+                // 8. 打印日志，记录当前操作后的日期
                 console.log("当前日期已更新为：", formatDate(time));
             } else {
+                // 如果未找到sendDate元素，打印日志提示
                 console.log("没有找到sendDate元素");
             }
         });
 
-        // 按钮点击事件：点击②（保留原有功能）
+        // 按钮点击事件：点击②（文件操作与后续流程触发）
         runButton2.addEventListener('click', function () {
+            // 1. 查找id为'bu'的按钮元素（通常为下一步/继续按钮）
             var continuebut = document.querySelector("#bu");
+
+            // 2. 如果找到该按钮，则自动触发点击事件（进入后续流程）
             if (continuebut) {
                 continuebut.click();
             }
+
+            // 3. 查找名称以'33D'开头的iframe（文件操作iframe）
             var continueiframe = document.querySelector("iframe[name^='33D']");
+
+            // 4. 检查是否找到目标iframe
             if (!continueiframe) {
+                // 4.1 未找到则打印日志并退出
                 console.log("没有找到符合条件的33D开头iframe");
                 return;
             } else {
+                // 4.2 找到则打印日志
                 console.log("找到符合条件的33D开头iframe");
+
+                // 5. 获取iframe内部的文档对象（兼容不同浏览器）
                 var continueiframeDocument = continueiframe.contentDocument || continueiframe.contentWindow.document;
+
+                // 6. 在iframe内部查找id为'file'的文件输入元素
                 var continuefile = continueiframeDocument.querySelector("#file");
+
+                // 7. 如果找到文件输入元素，则自动触发点击事件（打开文件选择对话框）
                 if (continuefile) {
                     continuefile.click();
                 }
             }
         });
 
-        // 结束按钮点击事件（保留原有功能）
+        // 按钮点击事件：结束（控制面板关闭功能）
         closeButton.addEventListener('click', function () {
+            // 1. 安全检查：确保iframe存在且有父节点
+            // 这是一个防御性编程措施，防止在iframe已被移除的情况下尝试访问
             if (iframe && iframe.parentNode) {
+                // 2. 从DOM中移除iframe元素，关闭控制面板
                 iframe.parentNode.removeChild(iframe);
             }
         });
 
+
+        /* 事件监听 */
         // 日期选择器事件监听（保留原有功能）
         datePicker.addEventListener('change', function () {
             time = new Date(this.value);
