@@ -2,7 +2,7 @@
 // @name        征纳互动人数和在线监控
 // @namespace   https://scriptcat.org/
 // @description 实施监控征纳互动等待人数和在线状态，支持语音播报、webhook推送文本和图片、自定义常用语
-// @version     25.12.25
+// @version     25.12.27
 // @author      runos
 // @match       https://znhd.hunan.chinatax.gov.cn:8443/*
 // @match       https://example.com/*
@@ -152,7 +152,7 @@ function DM() {
         // 检测webhookUrl和webhookToken是否为空
         if (!webhookUrl || !webhookToken) {
             // 执行生成配置的逻辑（与生成配置按钮相同）
-            const newWebhookUrl = "https://webhook-service.zeabur.app";
+            const newWebhookUrl = "https://znhd-service.zeabur.app";
             const newWebhookToken = Math.random().toString(36).substring(2, 15);
             const newPostToken = btoa(newWebhookToken);
             patchAllvalue({ webhookUrl: newWebhookUrl, webhookToken: newWebhookToken, postToken: newPostToken });
@@ -293,7 +293,8 @@ function DM() {
                         type: "primary",
                         onClick: () => {
                             // 生成二维码并显示
-                            const url = 'https://gotify-post.zeabur.app?url=' + encodeURIComponent(webhookUrl) + "/message?token=" + encodeURIComponent(postToken);
+                            // https://znhd-service.zeabur.app/?url=https://znhd-service.zeabur.app/message?token=a2oyZTZtNTU3MXA%3D
+                            const url = "https://znhd-service.zeabur.app/?url=" + webhookUrl.replace(/\/$/, '') + '/message?token=' + encodeURIComponent(postToken);
 
                             // 创建模态框显示二维码（使用原生DOM方法）
                             const modalOverlay = document.createElement('div');
