@@ -25,7 +25,10 @@
     // ==================== 常量定义 ====================
     const API_URL = 'https://tiku.122050.xyz/adapter-service/search?use=local';
     const CREATE_URL = 'https://tiku.122050.xyz/adapter-service/questions';
-    const AUTH_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIn0.GqdCRjZSkxcRHKvYNXA0IIBu8CmiUcLQO9xpKn_TGek';
+    const LOGIN_URL = 'https://tiku.122050.xyz/adapter-service/user/login';
+
+    // 动态Token（从配置获取或登录后更新）
+    let AUTH_TOKEN = '';
 
     // 选择器常量
     const SELECTORS = {
@@ -69,6 +72,23 @@
                     type: 'checkbox',
                     default: false,
                     description: '进入法规题页面后自动启动监控'
+                }
+            }
+        },
+        auth: {
+            groupName: '题库账号',
+            settings: {
+                username: {
+                    label: '用户名',
+                    type: 'text',
+                    default: '',
+                    description: '题库登录用户名'
+                },
+                password: {
+                    label: '密码',
+                    type: 'text',
+                    default: '',
+                    description: '题库登录密码'
                 }
             }
         },
@@ -125,20 +145,34 @@
         corePages: { logs: true, settings: true, about: true }
     });
 
-    // ATF 主页面：监控控制 + 导出日志入口
+    // ATF 主页面：监控控制 + 登录入口
     const mainPage = {
         id: 'main',
         title: '主页',
         icon: 'house',
         onShow: ($container) => {
             if ($container.children().length > 0) return;
+            const tokenStatus = AUTH_TOKEN ? '✅ 已登录' : '❌ 未登录';
             $container.css('display', 'block').html(`
                 <h1>法规题自动处理-自建题库版</h1>
                 <p>请在法规题页面使用本脚本。</p>
                 <p>本代码使用自建题库进行答题，遇到题库中没有的题目，会自动上传到题库。</p>
                 <p>-------</p>
+                <p>登录状态: <span id="${SCRIPT_ID}-token-status">${tokenStatus}</span></p>
+                <button id="${SCRIPT_ID}-login-btn" class="${SCRIPT_ID}-dialog-button">登录题库</button>
                 <button id="${SCRIPT_ID}-monitor-btn" class="${SCRIPT_ID}-dialog-button primary">${state.isStopped ? '开始监控' : '停止监控'}</button>
             `);
+
+            $container.find(`#${SCRIPT_ID}-login-btn`).on('click', async () => {
+                const username = cfg('auth.username');
+                const password = cfg('auth.password');
+                if (!username || !password) {
+                    atf.UIManager.showNotification('请先在设置中填写用户名和密码', { type: 'warning', duration: 3000 });
+                    atf.UIManager.showPanel('settings');
+                    return;
+                }
+                await loginAndGetToken(username, password);
+            });
 
             $container.find(`#${SCRIPT_ID}-monitor-btn`).on('click', (e) => {
                 e.preventDefault();
@@ -182,6 +216,15 @@
      */
     async function uploadQuestion(question, answers) {
         if (state.isStopped) return false;
+        if (!AUTH_TOKEN) {
+            atf.Logger.warn('未登录题库，无法上传题目');
+            atf.UIManager.showNotification('请先登录题库', { type: 'warning', duration: 3000 });
+            // 终止检测，将停止监控按钮文本设置为开始监控
+            state.isStopped = true;
+            setControlBtnText('开始监控');
+            atf.UIManager.showPanel('main');
+            return false;
+        }
         const questionText = cfg('general.useTextReplace') ? textReplace(question.text) : question.text;
 
         return new Promise((resolve) => {
@@ -224,6 +267,56 @@
                 },
                 onerror: (e) => { atf.Logger.error(`上传题目失败: ${e.message}`); resolve(false); },
                 ontimeout: () => { atf.Logger.error('上传题目超时'); resolve(false); }
+            });
+        });
+    }
+
+    /**
+     * 登录并获取Token
+     * @param {string} username 用户名
+     * @param {string} password 密码
+     * @returns {Promise<boolean>} 是否登录成功
+     */
+    async function loginAndGetToken(username, password) {
+        atf.Logger.info(`正在登录题库，用户名: ${username}`);
+        atf.UIManager.showNotification('正在登录...', { type: 'info', duration: 2000 });
+
+        return new Promise((resolve) => {
+            GM_xmlhttpRequest({
+                method: 'GET',
+                url: `${LOGIN_URL}?username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`,
+                onload: (res) => {
+                    try {
+                        const result = JSON.parse(res.responseText);
+                        if (result.jwt) {
+                            AUTH_TOKEN = result.jwt;
+                            atf.Logger.info('✅ 登录成功，Token已获取');
+                            atf.UIManager.showNotification('✅ 登录成功', { type: 'success', duration: 2000 });
+                            // 更新UI显示
+                            const tokenStatus = document.getElementById(`${SCRIPT_ID}-token-status`);
+                            if (tokenStatus) tokenStatus.textContent = '✅ 已登录';
+                            resolve(true);
+                        } else {
+                            atf.Logger.warn(`登录失败: ${result.message || '未知错误'}`);
+                            atf.UIManager.showNotification(`❌ 登录失败: ${result.message || '未知错误'}`, { type: 'error', duration: 3000 });
+                            resolve(false);
+                        }
+                    } catch (e) {
+                        atf.Logger.error(`解析登录响应失败: ${e.message}`);
+                        atf.UIManager.showNotification('❌ 登录响应解析失败', { type: 'error', duration: 3000 });
+                        resolve(false);
+                    }
+                },
+                onerror: (e) => {
+                    atf.Logger.error(`登录请求失败: ${e.message}`);
+                    atf.UIManager.showNotification('❌ 登录请求失败', { type: 'error', duration: 3000 });
+                    resolve(false);
+                },
+                ontimeout: () => {
+                    atf.Logger.error('登录请求超时');
+                    atf.UIManager.showNotification('❌ 登录请求超时', { type: 'error', duration: 3000 });
+                    resolve(false);
+                }
             });
         });
     }
@@ -370,6 +463,7 @@
          */
         async query(question, skipTextReplace = false) {
             if (state.isStopped) throw new Error('脚本已停止');
+            if (!AUTH_TOKEN) throw new Error('未登录题库，请先登录');
             return new Promise((resolve, reject) => {
                 const isMulti = question.options.some(opt => (opt.element?.type || '').toLowerCase() === 'checkbox');
                 const questionText = skipTextReplace ? question.text : (cfg('general.useTextReplace') ? textReplace(question.text) : question.text);
@@ -483,6 +577,18 @@
             if (state.isStopped) state.isStopped = false;
             if (state.checkInterval) clearInterval(state.checkInterval);
             setControlBtnText('停止监控');
+
+            // 自动登录检查：如果已配置账号密码且当前未登录，则自动登录
+            if (!AUTH_TOKEN) {
+                const username = cfg('auth.username');
+                const password = cfg('auth.password');
+                if (username && password) {
+                    atf.Logger.info('检测到已配置题库账号，自动登录中...');
+                    loginAndGetToken(username, password);
+                } else {
+                    atf.Logger.warn('未配置题库账号，请先在设置中填写用户名和密码');
+                }
+            }
             state.checkInterval = setInterval(() => {
                 if (!state.isProcessing && !state.isStopped) {
                     this.mainProcess();
