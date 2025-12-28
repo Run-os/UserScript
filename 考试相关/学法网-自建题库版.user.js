@@ -518,7 +518,7 @@
                                 const total = questions.length;
                                 let processed = 0;
 
-                                atf.Logger.info(`🔼开始上传题目，共 ${total} 道题目`);
+                                atf.Logger.info(`开始上传题目，共 ${total} 道题目`);
 
 
                                 for (const q of questions) {
@@ -528,7 +528,7 @@
                                     if (hasCorrect) {
                                         // 检查题目是否在已存在记录中（搜题成功过的题目跳过上传）
                                         if (state.existingQuestions.has(q.text)) {
-                                            atf.Logger.info(`题目已存在，跳过上传: ${q.text.substring(0, 15)}...`);
+                                            atf.Logger.info(`🔼题目已存在，跳过上传: ${q.text.substring(0, 15)}...`);
                                             continue;
                                         }
 
@@ -537,10 +537,10 @@
                                             const success = await uploadQuestion(q, answers);
                                             if (success) {
                                                 uploadedQuestions.push(q.text);
-                                                atf.Logger.info(`成功上传: ${q.text.substring(0, 15)}...`);
+                                                atf.Logger.info(`🔼成功上传: ${q.text.substring(0, 15)}...`);
                                             } else {
                                                 skippedQuestions.push(q.text);
-                                                atf.UIManager.showNotification(`上传失败: ${q.text.substring(0, 15)}...`, {
+                                                atf.UIManager.showNotification(`❌上传失败: ${q.text.substring(0, 15)}...`, {
                                                     type: 'error',
                                                     duration: 3000
                                                 });
