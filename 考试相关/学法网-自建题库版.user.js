@@ -22,12 +22,21 @@
 (function () {
     'use strict';
 
-    // 题库查询 API
+    // ==================== 常量定义 ====================
     const API_URL = 'https://tiku.122050.xyz/adapter-service/search?use=local';
-    // 题库创建题目 API
     const CREATE_URL = 'https://tiku.122050.xyz/adapter-service/questions';
-    // 题库 API 认证 Token
     const AUTH_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIn0.GqdCRjZSkxcRHKvYNXA0IIBu8CmiUcLQO9xpKn_TGek';
+
+    // 选择器常量
+    const SELECTORS = {
+        DISABLED_NEXT: '.next.on, .next.disabled, .next[disabled], .next-btn.on, .next-btn.disabled, .next-btn[disabled], .btn-next.on, .btn-next.disabled, .btn-next[disabled]',
+        CLICKABLE_NEXT: '.next:not(.on):not(.disabled):not([disabled]), .next-btn:not(.on):not(.disabled):not([disabled]), .btn-next:not(.on):not(.disabled):not([disabled])',
+        QUESTION_CONTAINER: '#question, .question-container, form.questions',
+        SUBMIT_BTN: '.tijiao',
+        TITLE: '.s_flzs_fbiao.ContentTitle'
+    };
+
+    // ==================== 框架初始化 ====================
 
     // 初始化 jQuery 的无冲突模式
     const jq = $.noConflict(true);
@@ -123,9 +132,8 @@
         icon: 'house',
         onShow: ($container) => {
             if ($container.children().length > 0) return;
-            const enableTextReplace = cfg('general.useTextReplace');
             $container.css('display', 'block').html(`
-                <h1>法规题自动处理-自建题库版</h3>
+                <h1>法规题自动处理-自建题库版</h1>
                 <p>请在法规题页面使用本脚本。</p>
                 <p>本代码使用自建题库进行答题，遇到题库中没有的题目，会自动上传到题库。</p>
                 <p>-------</p>
@@ -149,6 +157,8 @@
     atf.UIManager.addPage(ATF.pages.logPage);
     atf.UIManager.addPage(ATF.pages.settingsPage);
 
+    // ==================== 状态管理 ====================
+
     // 运行态（不持久化 UI 状态）
     const state = {
         checkInterval: null,
@@ -161,6 +171,8 @@
 
     // 便捷配置读取
     const cfg = (path) => atf.ConfigManager.get(path);
+
+    // ==================== 工具函数 ====================
 
     /**
      * 上传题目到题库（去重上传）
@@ -199,7 +211,7 @@
                     try {
                         const result = JSON.parse(res.responseText);
                         if (result.message && result.message.includes('成功')) {
-                            atf.Logger.debug(`题目上传成功: ${questionText.substring(0, 30)}...`);
+                            atf.Logger.debug(`🔼题目上传成功: ${questionText.substring(0, 30)}...`);
                             resolve(true);
                         } else {
                             atf.Logger.warn(`题目上传失败: ${result.message || res.responseText}`);
@@ -231,6 +243,35 @@
     }
 
     /**
+     * 通用API请求封装
+     * @param {string} url 请求地址
+     * @param {Object} payload 请求数据
+     * @returns {Promise<Object>} 解析后的响应数据
+     */
+    function apiRequest(url, payload) {
+        return new Promise((resolve, reject) => {
+            GM_xmlhttpRequest({
+                method: 'POST',
+                url,
+                headers: { 'Content-Type': 'application/json; charset=utf-8' },
+                data: JSON.stringify(payload),
+                onload: (res) => {
+                    try {
+                        const result = JSON.parse(res.responseText);
+                        resolve(result);
+                    } catch (e) {
+                        reject(new Error(`解析响应失败: ${e.message}`));
+                    }
+                },
+                onerror: (e) => reject(new Error(`请求失败: ${e.message}`)),
+                ontimeout: () => reject(new Error('请求超时'))
+            });
+        });
+    }
+
+    // ==================== 题目处理器 ====================
+
+    /**
      * 题目处理器
      * - extract(): 解析题目与选项结构。
      * - extractOptions(container): 提取选项文本与输入元素。
@@ -250,7 +291,7 @@
          */
         extract() {
             if (state.isStopped) return [];
-            const container = document.getElementById('question') || document.querySelector('form.questions');
+            const container = document.querySelector(SELECTORS.QUESTION_CONTAINER);
             if (!container) return [];
 
             const questions = [];
@@ -422,7 +463,7 @@
         }
     };
 
-    // ========== 控制器 ==========
+    // ==================== 控制器 ====================
     function setControlBtnText(text) {
         // 在 ATF 主页面中动态更新按钮文本（如果按钮存在）
         const btn = document.getElementById(`${SCRIPT_ID}-monitor-btn`);
@@ -485,7 +526,7 @@
          */
         async submitAnswers(questions) {
             if (state.isStopped) return false;
-            const submitBtn = document.querySelector('.tijiao');
+            const submitBtn = document.querySelector(SELECTORS.SUBMIT_BTN);
             if (!submitBtn) {
                 atf.Logger.warn('未找到提交按钮，尝试继续');
                 return true;
@@ -516,19 +557,16 @@
                                 const uploadedQuestions = [];
                                 const skippedQuestions = [];
                                 const total = questions.length;
-                                let processed = 0;
 
                                 atf.Logger.info(`开始上传题目，共 ${total} 道题目`);
 
-
                                 for (const q of questions) {
                                     if (state.isStopped) break;
-                                    processed++;
                                     const hasCorrect = q.container.querySelector('.empty.an.answertrue, .test.an.answertrue');
                                     if (hasCorrect) {
                                         // 检查题目是否在已存在记录中（搜题成功过的题目跳过上传）
                                         if (state.existingQuestions.has(q.text)) {
-                                            atf.Logger.info(`🔼题目已存在，跳过上传: ${q.text.substring(0, 15)}...`);
+                                            atf.Logger.info(`🔼题目已存在，跳过上传: ${q.text.substring(0, 30)}...`);
                                             continue;
                                         }
 
@@ -537,7 +575,7 @@
                                             const success = await uploadQuestion(q, answers);
                                             if (success) {
                                                 uploadedQuestions.push(q.text);
-                                                atf.Logger.info(`🔼成功上传: ${q.text.substring(0, 15)}...`);
+                                                atf.Logger.info(`🔼成功上传: ${q.text.substring(0, 30)}...`);
                                             } else {
                                                 skippedQuestions.push(q.text);
                                                 atf.UIManager.showNotification(`❌上传失败: ${q.text.substring(0, 15)}...`, {
@@ -587,16 +625,8 @@
          */
         findAndClickNext() {
             if (state.isStopped) return;
-            const disabledEl = document.querySelector(
-                '.next.on, .next.disabled, .next[disabled], '
-                + '.next-btn.on, .next-btn.disabled, .next-btn[disabled], '
-                + '.btn-next.on, .btn-next.disabled, .btn-next[disabled]'
-            );
-            const clickable = document.querySelector(
-                '.next:not(.on):not(.disabled):not([disabled]), '
-                + '.next-btn:not(.on):not(.disabled):not([disabled]), '
-                + '.btn-next:not(.on):not(.disabled):not([disabled])'
-            );
+            const disabledEl = document.querySelector(SELECTORS.DISABLED_NEXT);
+            const clickable = document.querySelector(SELECTORS.CLICKABLE_NEXT);
 
             if (disabledEl) {
                 this.stop();
@@ -647,14 +677,9 @@
             state.isProcessing = true;
             try {
                 //获取css为s_flzs_fbiao ContentTitle的文本
-                const title = document.querySelector('.s_flzs_fbiao.ContentTitle')?.textContent?.trim() || '';
-                atf.Logger.debug("  ")
-                atf.Logger.debug("  ")
-                atf.Logger.error('当前页面标题:', title);
-                const container =
-                    document.getElementById('question') ||
-                    document.querySelector('.question-container') ||
-                    document.querySelector('form.questions');
+                const title = document.querySelector(SELECTORS.TITLE)?.textContent?.trim() || '';
+                atf.Logger.info('当前页面标题:', title);
+                const container = document.querySelector(SELECTORS.QUESTION_CONTAINER);
 
                 if (!container) {
                     atf.Logger.info('未找到题目容器，继续查找.next');
@@ -739,8 +764,15 @@
                     }
                 }
 
-                // 如果所有题目都未找到答案，停止检测
-                if (!hasAnyAnswer && firstUnanswered) {
+                // 检查是否所有题目都已答对或有答案（不再执行停止检测逻辑）
+                const allAnsweredOrHasAnswer = questions.every(q => {
+                    const isAnswered = q.container.querySelector('.test.an.answertrue, .empty.an.answertrue');
+                    const isChecked = q.options.some(opt => opt.element.checked);
+                    return isAnswered || isChecked;
+                });
+
+                // 如果所有题目都未找到答案且未作答，停止检测
+                if (!hasAnyAnswer && firstUnanswered && !allAnsweredOrHasAnswer) {
                     atf.Logger.warn('所有题目都未收录，停止检测，请手动处理');
                     atf.UIManager.showNotification(`题目未收录: ${firstUnanswered}...`, {
                         type: 'warning',
@@ -771,7 +803,7 @@
         }
     };
 
-
+    // ==================== 初始化 ====================
 
     // 初始化与页面变化监听（仅在法规题页）
     function main() {
