@@ -26,6 +26,8 @@
     const API_URL = 'https://tiku.122050.xyz/adapter-service/search?use=local';
     // 题库创建题目 API
     const CREATE_URL = 'https://tiku.122050.xyz/adapter-service/questions';
+    // 题库 API 认证 Token
+    const AUTH_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIn0.GqdCRjZSkxcRHKvYNXA0IIBu8CmiUcLQO9xpKn_TGek';
 
     // 初始化 jQuery 的无冲突模式
     const jq = $.noConflict(true);
@@ -153,31 +155,15 @@
         notFoundCount: 0,
         isProcessing: false,
         isStopped: true,
-        pageChangeCount: 0
+        pageChangeCount: 0,
+        existingQuestions: new Set() // 记录题库中已存在的题目（搜题成功后记录）
     };
 
     // 便捷配置读取
     const cfg = (path) => atf.ConfigManager.get(path);
 
-    // 已上传题目记录（使用 localStorage）
-    const UPLOADED_KEY = `${SCRIPT_ID}_uploaded_questions`;
-    function getUploadedQuestions() {
-        try { return JSON.parse(localStorage.getItem(UPLOADED_KEY) || '[]'); } catch { return []; }
-    }
-    function isQuestionUploaded(questionText) {
-        const uploaded = getUploadedQuestions();
-        return uploaded.some(uq => uq === questionText);
-    }
-    function markQuestionUploaded(questionText) {
-        const uploaded = getUploadedQuestions();
-        if (!uploaded.includes(questionText)) {
-            uploaded.push(questionText);
-            localStorage.setItem(UPLOADED_KEY, JSON.stringify(uploaded));
-        }
-    }
-
     /**
-     * 上传题目到题库
+     * 上传题目到题库（去重上传）
      * @param {Object} question 题目对象
      * @param {Array} answers 正确答案数组
      * @returns {Promise<boolean>} 是否上传成功
@@ -186,34 +172,33 @@
         if (state.isStopped) return false;
         const questionText = cfg('general.useTextReplace') ? textReplace(question.text) : question.text;
 
-        // 检查是否已上传
-        if (isQuestionUploaded(questionText)) {
-            atf.Logger.debug(`题目已上传过，跳过: ${questionText.substring(0, 30)}...`);
-            return true;
-        }
-
         return new Promise((resolve) => {
+            const isMulti = question.options.some(opt => (opt.element?.type || '').toLowerCase() === 'checkbox');
             const payload = [{
                 question: questionText,
                 options: JSON.stringify(question.options.map(o => cfg('general.useTextReplace') ? textReplace(o.text) : o.text)),
                 answer: JSON.stringify(answers),
-                type: question.options.some(opt => (opt.element?.type || '').toLowerCase() === 'checkbox') ? 1 : 0,
+                type: isMulti ? 1 : 0,
                 plat: 0,
                 course_name: '湖南学法网',
                 extra: `上传时间:${new Date().toLocaleString()}`
             }];
+            atf.Logger.debug(`🔼上传题目: question=${questionText.substring(0, 30)}..., answers=${JSON.stringify(answers)}`);
 
             GM_xmlhttpRequest({
                 method: 'POST',
                 url: CREATE_URL,
-                headers: { 'Content-Type': 'application/json; charset=utf-8' },
+                headers: {
+                    'Content-Type': 'application/json; charset=utf-8',
+                    'Authorization': `${AUTH_TOKEN}`
+                },
                 data: JSON.stringify(payload),
                 onload: (res) => {
                     if (state.isStopped) return resolve(false);
+                    atf.Logger.debug(`上传响应: ${res.responseText}`);
                     try {
                         const result = JSON.parse(res.responseText);
                         if (result.message && result.message.includes('成功')) {
-                            markQuestionUploaded(questionText);
                             atf.Logger.debug(`题目上传成功: ${questionText.substring(0, 30)}...`);
                             resolve(true);
                         } else {
@@ -300,8 +285,9 @@
                         qid: el.getAttribute('qid') || '',
                         container: optionsContainer
                     });
-                    atf.Logger.debug(`提取题目: ${text}    选项: ${options.map(o => o.text).join(', ')}`);
+                    atf.Logger.debug(`提取题目: ${text}`);
                 }
+                atf.Logger.debug("=========================================")
             });
 
             return questions;
@@ -337,16 +323,21 @@
         /**
          * 查询外部题库答案
          * 通过 POST 接口提交题干、选项与题型，并解析 `answer.allAnswer`。
-         * @param {{text: string}} question 题目对象（需包含题干）
+         * @param {{text: string, options: Array}} question 题目对象（需包含题干和选项）
+         * @param {boolean} skipTextReplace 是否跳过textReplace处理（用于已处理过的题目）
          * @returns {Promise<{answer: {answerKey: string[]}}>} 结果对象
          */
-        async query(question) {
+        async query(question, skipTextReplace = false) {
             if (state.isStopped) throw new Error('脚本已停止');
             return new Promise((resolve, reject) => {
                 const isMulti = question.options.some(opt => (opt.element?.type || '').toLowerCase() === 'checkbox');
+                const questionText = skipTextReplace ? question.text : (cfg('general.useTextReplace') ? textReplace(question.text) : question.text);
+                const options = skipTextReplace
+                    ? question.options.map(o => o.text)
+                    : question.options.map(o => cfg('general.useTextReplace') ? textReplace(o.text) : o.text);
                 const payload = {
-                    question: cfg('general.useTextReplace') ? textReplace(question.text) : question.text,
-                    options: question.options.map(o => cfg('general.useTextReplace') ? textReplace(o.text) : o.text),
+                    question: questionText,
+                    options: options,
                     type: isMulti ? 1 : 0
                 };
                 GM_xmlhttpRequest({
@@ -356,7 +347,8 @@
                     data: JSON.stringify(payload),
                     onload: (res) => {
                         if (state.isStopped) return reject(new Error('脚本已停止'));
-                        atf.Logger.debug(`API请求: ${JSON.stringify(payload)}`);
+
+                        atf.Logger.debug(`👾API请求: ${JSON.stringify(payload)}`);
                         try {
                             const result = JSON.parse(res.responseText);
                             const allAnswer = result?.answer?.allAnswer;
@@ -367,10 +359,7 @@
                                 atf.Logger.debug(`API返回答案: ${texts.join(', ')}`);
                                 resolve({ answer: { answerKey: texts } });
                             } else {
-                                atf.Logger.warn('未找到答案或答案为空，标记到本地');
-                                atf.UIManager.showNotification('未找到答案或答案为空', { type: "warning", duration: 4000 });
-                                // 标记未找到的题目
-                                markQuestionUploaded(question.text);
+                                atf.Logger.warn('未找到答案或答案为空');
                                 resolve({ answer: { answerKey: [] } });
                             }
                         } catch (e) {
@@ -387,10 +376,9 @@
 
         /**
          * 根据答案选择选项
-         * 使用二元语法（bigram）Dice 系数进行相似度匹配；阈值 90%。
-         * 单选：选择最佳相似度选项；多选：选择所有达到阈值的选项。
+         * 直接对比选项文本与答案文本，文本完全相等时选择。
+         * 单选：选择与答案匹配的选项；多选：选择所有匹配的选项。
          * 边界：答案为空时触发停止（避免错误提交）。
-         * 并输出每次比较的原文、归一化文本和相似度百分比。
          * @param {Object} question 题目对象（包含选项与容器）
          * @param {{answer?: {answerKey?: string[]}}} answerData 查询结果
          * @returns {Promise<boolean>} 是否继续流程
@@ -404,75 +392,29 @@
                 return false;
             }
 
-            const normalize = (s) => {
-                let t = String(s || '').trim().toLowerCase();
-                if (state.useTextReplace) t = textReplace(t);
-                t = t.replace(/[\s\r\n\t]+/g, '');
-                t = t.replace(/[^a-z0-9\u4e00-\u9fa5]+/gi, '');
-                return t;
-            };
-            const bigrams = (s) => {
-                const n = s.length;
-                if (n <= 1) return [s];
-                const arr = [];
-                for (let i = 0; i < n - 1; i++) arr.push(s.slice(i, i + 2));
-                return arr;
-            };
-            const similarity = (a, b) => {
-                const A = bigrams(normalize(a));
-                const B = bigrams(normalize(b));
-                if (A.length === 0 || B.length === 0) return 0;
-                const mapB = new Map();
-                B.forEach(x => mapB.set(x, (mapB.get(x) || 0) + 1));
-                let inter = 0;
-                A.forEach(x => {
-                    const c = mapB.get(x);
-                    if (c > 0) { inter++; mapB.set(x, c - 1); }
-                });
-                return (2 * inter) / (A.length + B.length);
-            };
-
+            const normalize = (s) => String(s || '').trim();
             const isMulti = question.options.some(opt => (opt.element?.type || '').toLowerCase() === 'checkbox');
-            const THRESHOLD = 0.9;
-            // 处理多选
+
+            // 处理多选：选择所有与答案文本相等的选项
             if (isMulti) {
                 question.options.forEach(opt => {
-                    const sims = answers.map(ans => {
-                        const sim = similarity(opt.text, ans);
-                        //logger.info(`[比较] 选项="${opt.text}" vs 答案="${ans}" => 相似度 ${Math.round(sim * 100)}%;
-                        return sim;
-                    });
-                    const bestSim = Math.max(...sims);
-                    atf.Logger.debug(`[结果] 选项="${opt.text}" 答案=“${answers.join('、')}” 最佳相似度 ${Math.round(bestSim * 100)}%`);
-                    // 相似度超过阈值且未被选中时，点击选择
-                    if (bestSim >= THRESHOLD && !opt.element.checked) {
+                    const normalizedOpt = normalize(opt.text);
+                    const isMatch = answers.some(ans => normalizedOpt === normalize(ans));
+                    if (isMatch && !opt.element.checked) {
                         opt.element.click();
-                        atf.Logger.debug(`已选择选项(相似度${Math.round(bestSim * 100)}%): ${opt.text}`);
+                        atf.Logger.debug(`已选择选项: ${opt.text}`);
                     }
                 });
             } else {
-                // 处理单选
-                let best = { opt: null, sim: 0 };
-                question.options.forEach(opt => {
-                    const sims = answers.map(ans => {
-                        const sim = similarity(opt.text, ans);
-                        //logger.info(`[比较] 选项="${opt.text}" vs 答案="${ans}" => 相似度 ${Math.round(sim * 100)}%;
-                        return sim;
-                    });
-                    const sim = Math.max(...sims);
-                    atf.Logger.debug(`[结果] 选项="${opt.text}" 答案=“${answers.join('、')}” 最佳相似度 ${Math.round(sim * 100)}%`);
-                    if (sim > best.sim) best = { opt, sim };
-                });
-                // 修复逻辑冗余并统一格式
-                if (best.opt && best.sim >= THRESHOLD) {
-                    if (!best.opt.element.checked) {
-                        best.opt.element.click();
-                        atf.Logger.debug(`已选择选项(相似度${Math.round(best.sim * 100)}%): ${best.opt.text}`);
-                    } else {
-                        atf.Logger.debug(`选项 "${best.opt.text}" 相似度 ${Math.round(best.sim * 100)}% 超过阈值 ${THRESHOLD * 100}%，已选中`);
+                // 处理单选：选择与答案文本相等的选项
+                const matchOpt = question.options.find(opt => normalize(opt.text) === normalize(answers[0]));
+                if (matchOpt) {
+                    if (!matchOpt.element.checked) {
+                        matchOpt.element.click();
+                        atf.Logger.debug(`已选择选项: ${matchOpt.text}`);
                     }
                 } else {
-                    atf.Logger.warn('未找到满足相似度阈值的选项');
+                    atf.Logger.warn('未找到匹配的选项');
                 }
             }
 
@@ -520,7 +462,7 @@
             }
             setControlBtnText('开始监控');
             atf.Logger.info('停止监控');
-            atf.UIManager.showNotification("停止监控", { type: "error", duration: 4000 });
+            atf.UIManager.showNotification("停止监控");
         },
 
         /**
@@ -556,6 +498,7 @@
                 const checkResults = () => {
                     if (state.isStopped) return resolve(false);
                     checkCount++;
+                    // 检查是否有错误答案或正确答案
                     const hasError = questions.some(q => q.container.querySelector('.empty.an.answerfalse'));
                     const hasTrue = questions.some(q => q.container.querySelector('.empty.an.answertrue'));
                     const hasResults = hasError || hasTrue;
@@ -563,22 +506,65 @@
                     if (hasResults) {
                         if (hasError) {
                             atf.Logger.error('发现错误答案，停止处理');
-                            atf.UIManager.showNotification("发现错误答案，停止处理", { type: "error", duration: 4000 });
+                            atf.UIManager.showNotification("发现错误答案，停止处理");
                             resolve(false);
                         } else {
                             atf.Logger.info('所有题目回答正确');
-                            // 答题正确后，上传未收录的题目到题库
+                            // 答题正确后，将未收录的题目上传到自建题库，以便后续复用
+                            // 使用 IIFE（立即执行异步函数）确保上传逻辑在提交答案后立即触发，不阻塞后续流程
                             (async () => {
+                                const uploadedQuestions = [];
+                                const skippedQuestions = [];
+                                const total = questions.length;
+                                let processed = 0;
+
+                                atf.Logger.info(`🔼开始上传题目，共 ${total} 道题目`);
+
+
                                 for (const q of questions) {
-                                    if (q.container.querySelector('.empty.an.answertrue')) {
-                                        const answer = await questionHandler.query(q);
-                                        const answers = answer?.answer?.answerKey || [];
+                                    if (state.isStopped) break;
+                                    processed++;
+                                    const hasCorrect = q.container.querySelector('.empty.an.answertrue, .test.an.answertrue');
+                                    if (hasCorrect) {
+                                        // 检查题目是否在已存在记录中（搜题成功过的题目跳过上传）
+                                        if (state.existingQuestions.has(q.text)) {
+                                            atf.Logger.info(`题目已存在，跳过上传: ${q.text.substring(0, 15)}...`);
+                                            continue;
+                                        }
+
+                                        const answers = q.options.filter(opt => opt.element.checked).map(opt => opt.text);
                                         if (answers.length > 0) {
-                                            await uploadQuestion(q, answers);
+                                            const success = await uploadQuestion(q, answers);
+                                            if (success) {
+                                                uploadedQuestions.push(q.text);
+                                                atf.Logger.info(`成功上传: ${q.text.substring(0, 15)}...`);
+                                            } else {
+                                                skippedQuestions.push(q.text);
+                                                atf.UIManager.showNotification(`上传失败: ${q.text.substring(0, 15)}...`, {
+                                                    type: 'error',
+                                                    duration: 3000
+                                                });
+                                            }
+                                        } else {
+                                            skippedQuestions.push(q.text);
                                         }
                                     }
                                 }
+
+                                // 上传完成，显示最终结果
+                                setTimeout(() => {
+                                    if (uploadedQuestions.length > 0) {
+                                        atf.UIManager.showNotification(`已成功上传 ${uploadedQuestions.length} 道题目`, {
+                                            type: 'success',
+                                            duration: 2000
+                                        });
+                                    }
+                                    if (skippedQuestions.length > 0) {
+                                        atf.Logger.warn(`共 ${skippedQuestions.length} 道题目上传失败`);
+                                    }
+                                }, 100);
                             })();
+                            // 无论上传结果如何，继续下一步流程（点击下一页）
                             resolve(true);
                         }
                         return;
@@ -615,7 +601,7 @@
             if (disabledEl) {
                 this.stop();
                 atf.Logger.error('发现不可点击的.next元素，已停止');
-                atf.UIManager.showNotification("发现不可点击的.next元素，已停止", { type: "error", duration: 4000 });
+                atf.UIManager.showNotification("发现不可点击的.next元素，已停止");
                 return;
             }
 
@@ -626,10 +612,13 @@
 
                 setTimeout(() => {
                     if (state.isStopped) return;
+                    // 清除已存在题目记录（页面切换后需要重新搜题）
+                    state.existingQuestions.clear();
+                    atf.Logger.debug(`已清除已存在题目记录，当前数量: ${state.existingQuestions.size}`);
                     clickable.click();
                     state.pageChangeCount++;
                     state.notFoundCount = 0;
-                    atf.Logger.info(`点击.next，页面切换计数: ${state.pageChangeCount}`);
+                    atf.Logger.info(`➡️点击.next，页面切换计数: ${state.pageChangeCount}`);
                     setTimeout(() => { !state.isStopped && this.startMonitoring(); }, Number(cfg('behavior.pageLoadDelay') || 1000));
                 }, 500);
             } else {
@@ -637,7 +626,7 @@
                 if (remaining <= 0) {
                     this.stop();
                     atf.Logger.error(`连续${cfg('behavior.maxNotFound')}次未找到.next，已停止`);
-                    atf.UIManager.showNotification(`连续${cfg('behavior.maxNotFound')}次未找到.next，已停止`, { type: "error", duration: 4000 });
+                    atf.UIManager.showNotification(`连续${cfg('behavior.maxNotFound')}次未找到.next，已停止`);
                 } else {
                     atf.Logger.debug(`未找到.next，连续${state.notFoundCount}次，剩余${remaining}次`);
                 }
@@ -659,7 +648,9 @@
             try {
                 //获取css为s_flzs_fbiao ContentTitle的文本
                 const title = document.querySelector('.s_flzs_fbiao.ContentTitle')?.textContent?.trim() || '';
-                atf.Logger.error('💡当前页面标题:', title);
+                atf.Logger.debug("  ")
+                atf.Logger.debug("  ")
+                atf.Logger.error('当前页面标题:', title);
                 const container =
                     document.getElementById('question') ||
                     document.querySelector('.question-container') ||
@@ -679,38 +670,97 @@
                 const questions = questionHandler.extract();
 
                 if (questions.length === 0) {
-                    atf.Logger.warn('未找到题目，自动点击.next');
+                    atf.Logger.warn('➡️未找到题目，自动点击.next');
                     state.isProcessing = false;
                     this.findAndClickNext();
                     return;
                 }
 
+                let hasAnyAnswer = false;
+                let firstUnanswered = null;
+
                 for (const question of questions) {
                     if (state.isStopped) break;
 
-                    // 已答对跳过
-                    if (question.container.querySelector('.test.an.answertrue')) {
-                        atf.Logger.info('本题已答对，跳过');
+                    const isAnswered = question.container.querySelector('.test.an.answertrue');
+                    const questionText = cfg('general.useTextReplace') ? textReplace(question.text) : question.text;
+                    const truncatedQuestion = questionText.length > 15 ? questionText.substring(0, 15) + '...' : questionText;
+
+                    // 题目已答对
+                    if (isAnswered) {
+                        atf.Logger.info(`✅本题已答对，跳过作答，开始检查是否存在于题库中: ${truncatedQuestion}`);
+                        // 已答对的题目仍需要检查是否存在于题库中，不在则上传
+                        (async () => {
+                            try {
+                                const result = await questionHandler.query(question, true);
+                                const answers = result?.answer?.answerKey || [];
+                                if (answers.length === 0) {
+                                    // 搜不到答案，说明不在题库中，上传题目
+                                    const correctAnswers = question.options
+                                        .filter(opt => opt.element.checked)
+                                        .map(opt => opt.text);
+                                    if (correctAnswers.length > 0) {
+                                        atf.Logger.info(`🔼已答对题目不在题库中，准备上传: ${truncatedQuestion}`);
+                                        await uploadQuestion(question, correctAnswers);
+                                    }
+                                } else {
+                                    // 搜到答案了，记录到已存在题目集
+                                    state.existingQuestions.add(question.text);
+                                    atf.Logger.info(`🔼题目已存在于题库中，无需上传`);
+                                }
+                            } catch (e) {
+                                atf.Logger.warn(`检查已答对题目是否存在题库失败: ${e.message}`);
+                            }
+                        })();
                         continue;
                     }
 
+                    // 题目未答对或未作答，开始搜题
                     try {
                         const answer = await questionHandler.query(question);
-                        const success = await questionHandler.process(question, answer);
-                        if (!success) break;
-                        await new Promise(r => setTimeout(r, Number(cfg('behavior.answerDelay') || 500)));
+                        const answers = answer?.answer?.answerKey || [];
+
+                        if (answers.length > 0) {
+                            hasAnyAnswer = true;
+                            // 搜题成功，记录到已存在题目集（用于后续判断是否需要上传）
+                            state.existingQuestions.add(question.text);
+                            atf.Logger.debug(`✅搜题成功，题库中已存在`);
+                            atf.Logger.debug("=========================================")
+                            const success = await questionHandler.process(question, answer);
+                            if (!success) break;
+                            await new Promise(r => setTimeout(r, Number(cfg('behavior.answerDelay') || 500)));
+                        } else {
+                            atf.Logger.warn(`未搜到题目答案: ${truncatedQuestion}`);
+                            if (!firstUnanswered) firstUnanswered = truncatedQuestion;
+                        }
                     } catch (e) {
-                        atf.Logger.error(`处理题目出错: ${e.message}`);
-                        atf.UIManager.showNotification(`处理题目出错: ${e.message}`, { type: "error", duration: 4000 });
+                        atf.Logger.error(`处理题目出错: ${truncatedQuestion} - ${e.message}`);
+                        atf.UIManager.showNotification(`处理题目出错: ${truncatedQuestion} - ${e.message}`);
                     }
                 }
 
+                // 如果所有题目都未找到答案，停止检测
+                if (!hasAnyAnswer && firstUnanswered) {
+                    atf.Logger.warn('所有题目都未收录，停止检测，请手动处理');
+                    atf.UIManager.showNotification(`题目未收录: ${firstUnanswered}...`, {
+                        type: 'warning',
+                        duration: 5000
+                    });
+                    state.isProcessing = false;
+                    this.stop();
+                    return;
+                }
+
+                // 提交所有已标记的题目
                 if (!state.isStopped) {
                     const submitSuccess = await this.submitAnswers(questions);
                     if (!submitSuccess) {
+                        // 提交后发现有错误答案，停止答题
                         this.stop();
                         return;
                     }
+                    // 答题正确，提交答案后会异步上传标记的题目并清理
+                    // 直接点击下一页继续
                     this.findAndClickNext();
                 }
             } catch (e) {
