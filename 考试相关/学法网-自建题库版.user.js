@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         湖南学法网12348自动答题--自建题库版
 // @namespace    http://tampermonkey.net/
-// @version      25.10.31
-// @description  自动处理法规页面答题并点击.next元素，支持新API查询答案
+// @version      25.12.28
+// @description  自动处理法规页面答题并点击.next元素，支持新API查询答案，答题正确后自动上传题目到题库
 // @author       runos
 // @match        *://hn.12348.gov.cn/*
 // @icon         http://hn.12348.gov.cn/favicon.ico
@@ -24,6 +24,8 @@
 
     // 题库查询 API
     const API_URL = 'https://tiku.122050.xyz/adapter-service/search?use=local';
+    // 题库创建题目 API
+    const CREATE_URL = 'https://tiku.122050.xyz/adapter-service/questions';
 
     // 初始化 jQuery 的无冲突模式
     const jq = $.noConflict(true);
@@ -121,13 +123,11 @@
             if ($container.children().length > 0) return;
             const enableTextReplace = cfg('general.useTextReplace');
             $container.css('display', 'block').html(`
-                <h1>法规题自动处理</h3>
+                <h1>法规题自动处理-自建题库版</h3>
                 <p>请在法规题页面使用本脚本。</p>
-                <p>本代码使用全能题库进行答题，如果遇到无法自动答题的题目，可尝试在全能题库中上传题目，以帮助题库完善。</p>
+                <p>本代码使用自建题库进行答题，遇到题库中没有的题目，会自动上传到题库。</p>
                 <p>-------</p>
                 <button id="${SCRIPT_ID}-monitor-btn" class="${SCRIPT_ID}-dialog-button primary">${state.isStopped ? '开始监控' : '停止监控'}</button>
-                <button id="${SCRIPT_ID}-goto-settings" class="${SCRIPT_ID}-dialog-button secondary">打开设置</button>
-                <button id="${SCRIPT_ID}-goto-logs" class="${SCRIPT_ID}-dialog-button secondary">查看日志</button>
             `);
 
             $container.find(`#${SCRIPT_ID}-monitor-btn`).on('click', (e) => {
@@ -158,7 +158,78 @@
 
     // 便捷配置读取
     const cfg = (path) => atf.ConfigManager.get(path);
-    const dlog = (msg) => { atf.Logger.debug(`${msg}`); };
+
+    // 已上传题目记录（使用 localStorage）
+    const UPLOADED_KEY = `${SCRIPT_ID}_uploaded_questions`;
+    function getUploadedQuestions() {
+        try { return JSON.parse(localStorage.getItem(UPLOADED_KEY) || '[]'); } catch { return []; }
+    }
+    function isQuestionUploaded(questionText) {
+        const uploaded = getUploadedQuestions();
+        return uploaded.some(uq => uq === questionText);
+    }
+    function markQuestionUploaded(questionText) {
+        const uploaded = getUploadedQuestions();
+        if (!uploaded.includes(questionText)) {
+            uploaded.push(questionText);
+            localStorage.setItem(UPLOADED_KEY, JSON.stringify(uploaded));
+        }
+    }
+
+    /**
+     * 上传题目到题库
+     * @param {Object} question 题目对象
+     * @param {Array} answers 正确答案数组
+     * @returns {Promise<boolean>} 是否上传成功
+     */
+    async function uploadQuestion(question, answers) {
+        if (state.isStopped) return false;
+        const questionText = cfg('general.useTextReplace') ? textReplace(question.text) : question.text;
+
+        // 检查是否已上传
+        if (isQuestionUploaded(questionText)) {
+            atf.Logger.debug(`题目已上传过，跳过: ${questionText.substring(0, 30)}...`);
+            return true;
+        }
+
+        return new Promise((resolve) => {
+            const payload = [{
+                question: questionText,
+                options: JSON.stringify(question.options.map(o => cfg('general.useTextReplace') ? textReplace(o.text) : o.text)),
+                answer: JSON.stringify(answers),
+                type: question.options.some(opt => (opt.element?.type || '').toLowerCase() === 'checkbox') ? 1 : 0,
+                plat: 0,
+                course_name: '湖南学法网',
+                extra: `上传时间:${new Date().toLocaleString()}`
+            }];
+
+            GM_xmlhttpRequest({
+                method: 'POST',
+                url: CREATE_URL,
+                headers: { 'Content-Type': 'application/json; charset=utf-8' },
+                data: JSON.stringify(payload),
+                onload: (res) => {
+                    if (state.isStopped) return resolve(false);
+                    try {
+                        const result = JSON.parse(res.responseText);
+                        if (result.message && result.message.includes('成功')) {
+                            markQuestionUploaded(questionText);
+                            atf.Logger.debug(`题目上传成功: ${questionText.substring(0, 30)}...`);
+                            resolve(true);
+                        } else {
+                            atf.Logger.warn(`题目上传失败: ${result.message || res.responseText}`);
+                            resolve(false);
+                        }
+                    } catch (e) {
+                        atf.Logger.error(`解析上传结果失败: ${e.message}`);
+                        resolve(false);
+                    }
+                },
+                onerror: (e) => { atf.Logger.error(`上传题目失败: ${e.message}`); resolve(false); },
+                ontimeout: () => { atf.Logger.error('上传题目超时'); resolve(false); }
+            });
+        });
+    }
 
     /**
      * 文本符号统一替换
@@ -229,7 +300,7 @@
                         qid: el.getAttribute('qid') || '',
                         container: optionsContainer
                     });
-                    dlog(`提取题目: ${text}    选项: ${options.map(o => o.text).join(', ')}`);
+                    atf.Logger.debug(`提取题目: ${text}    选项: ${options.map(o => o.text).join(', ')}`);
                 }
             });
 
@@ -285,7 +356,7 @@
                     data: JSON.stringify(payload),
                     onload: (res) => {
                         if (state.isStopped) return reject(new Error('脚本已停止'));
-                        dlog(`API请求: ${JSON.stringify(payload)}`);
+                        atf.Logger.debug(`API请求: ${JSON.stringify(payload)}`);
                         try {
                             const result = JSON.parse(res.responseText);
                             const allAnswer = result?.answer?.allAnswer;
@@ -293,11 +364,13 @@
                                 ? Array.from(new Set(allAnswer.flat().filter(Boolean).map(t => String(t))))
                                 : [];
                             if (texts.length > 0) {
-                                dlog(`API返回答案: ${texts.join(', ')}`);
+                                atf.Logger.debug(`API返回答案: ${texts.join(', ')}`);
                                 resolve({ answer: { answerKey: texts } });
                             } else {
-                                atf.Logger.warn('未找到答案或答案为空');
+                                atf.Logger.warn('未找到答案或答案为空，标记到本地');
                                 atf.UIManager.showNotification('未找到答案或答案为空', { type: "warning", duration: 4000 });
+                                // 标记未找到的题目
+                                markQuestionUploaded(question.text);
                                 resolve({ answer: { answerKey: [] } });
                             }
                         } catch (e) {
@@ -370,11 +443,11 @@
                         return sim;
                     });
                     const bestSim = Math.max(...sims);
-                    dlog(`[结果] 选项="${opt.text}" 答案=“${answers.join('、')}” 最佳相似度 ${Math.round(bestSim * 100)}%`);
+                    atf.Logger.debug(`[结果] 选项="${opt.text}" 答案=“${answers.join('、')}” 最佳相似度 ${Math.round(bestSim * 100)}%`);
                     // 相似度超过阈值且未被选中时，点击选择
                     if (bestSim >= THRESHOLD && !opt.element.checked) {
                         opt.element.click();
-                        atf.Logger.info(`已选择选项(相似度${Math.round(bestSim * 100)}%): ${opt.text}`);
+                        atf.Logger.debug(`已选择选项(相似度${Math.round(bestSim * 100)}%): ${opt.text}`);
                     }
                 });
             } else {
@@ -387,16 +460,16 @@
                         return sim;
                     });
                     const sim = Math.max(...sims);
-                    dlog(`[结果] 选项="${opt.text}" 答案=“${answers.join('、')}” 最佳相似度 ${Math.round(sim * 100)}%`);
+                    atf.Logger.debug(`[结果] 选项="${opt.text}" 答案=“${answers.join('、')}” 最佳相似度 ${Math.round(sim * 100)}%`);
                     if (sim > best.sim) best = { opt, sim };
                 });
                 // 修复逻辑冗余并统一格式
                 if (best.opt && best.sim >= THRESHOLD) {
                     if (!best.opt.element.checked) {
                         best.opt.element.click();
-                        atf.Logger.info(`已选择选项(相似度${Math.round(best.sim * 100)}%): ${best.opt.text}`);
+                        atf.Logger.debug(`已选择选项(相似度${Math.round(best.sim * 100)}%): ${best.opt.text}`);
                     } else {
-                        dlog(`选项 "${best.opt.text}" 相似度 ${Math.round(best.sim * 100)}% 超过阈值 ${THRESHOLD * 100}%，已选中`);
+                        atf.Logger.debug(`选项 "${best.opt.text}" 相似度 ${Math.round(best.sim * 100)}% 超过阈值 ${THRESHOLD * 100}%，已选中`);
                     }
                 } else {
                     atf.Logger.warn('未找到满足相似度阈值的选项');
@@ -457,7 +530,7 @@
         restart() {
             state.isStopped = false;
             setControlBtnText('停止监控');
-            dlog('手动重启监测');
+            atf.Logger.info('手动重启监测');
             this.startMonitoring();
         },
 
@@ -475,7 +548,7 @@
                 atf.Logger.warn('未找到提交按钮，尝试继续');
                 return true;
             }
-            dlog('提交答案');
+            atf.Logger.info('提交答案');
             submitBtn.click();
 
             return new Promise(resolve => {
@@ -494,6 +567,18 @@
                             resolve(false);
                         } else {
                             atf.Logger.info('所有题目回答正确');
+                            // 答题正确后，上传未收录的题目到题库
+                            (async () => {
+                                for (const q of questions) {
+                                    if (q.container.querySelector('.empty.an.answertrue')) {
+                                        const answer = await questionHandler.query(q);
+                                        const answers = answer?.answer?.answerKey || [];
+                                        if (answers.length > 0) {
+                                            await uploadQuestion(q, answers);
+                                        }
+                                    }
+                                }
+                            })();
                             resolve(true);
                         }
                         return;
@@ -554,7 +639,7 @@
                     atf.Logger.error(`连续${cfg('behavior.maxNotFound')}次未找到.next，已停止`);
                     atf.UIManager.showNotification(`连续${cfg('behavior.maxNotFound')}次未找到.next，已停止`, { type: "error", duration: 4000 });
                 } else {
-                    dlog(`未找到.next，连续${state.notFoundCount}次，剩余${remaining}次`);
+                    atf.Logger.debug(`未找到.next，连续${state.notFoundCount}次，剩余${remaining}次`);
                 }
             }
         },
@@ -572,13 +657,16 @@
             if (state.isStopped) return;
             state.isProcessing = true;
             try {
+                //获取css为s_flzs_fbiao ContentTitle的文本
+                const title = document.querySelector('.s_flzs_fbiao.ContentTitle')?.textContent?.trim() || '';
+                atf.Logger.error('💡当前页面标题:', title);
                 const container =
                     document.getElementById('question') ||
                     document.querySelector('.question-container') ||
                     document.querySelector('form.questions');
 
                 if (!container) {
-                    dlog('未找到题目容器，继续查找.next');
+                    atf.Logger.info('未找到题目容器，继续查找.next');
                     state.isProcessing = false;
                     this.findAndClickNext();
                     return;
@@ -587,7 +675,7 @@
                 // 处理题目前滚动到底部，确保懒加载内容可见
                 window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
 
-                dlog('发现题目，开始处理');
+                atf.Logger.info('发现题目，开始处理');
                 const questions = questionHandler.extract();
 
                 if (questions.length === 0) {
@@ -602,7 +690,7 @@
 
                     // 已答对跳过
                     if (question.container.querySelector('.test.an.answertrue')) {
-                        dlog('本题已答对，跳过');
+                        atf.Logger.info('本题已答对，跳过');
                         continue;
                     }
 
@@ -643,7 +731,7 @@
             if (cfg('general.autoStart')) controller.startMonitoring();
             new MutationObserver(() => {
                 if (!state.isStopped && !state.checkInterval) {
-                    dlog('检测到页面变化，重启监测');
+                    atf.Logger.info('检测到页面变化，重启监测');
                     controller.startMonitoring();
                 }
             }).observe(document.body, { childList: true, subtree: true });
