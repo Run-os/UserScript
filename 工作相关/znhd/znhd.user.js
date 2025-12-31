@@ -2,7 +2,7 @@
 // @name        征纳互动人数和在线监控
 // @namespace   https://scriptcat.org/
 // @description 实施监控征纳互动等待人数和在线状态，支持语音播报、webhook推送文本和图片、自定义常用语
-// @version     25.12.27
+// @version     25.12.31
 // @author      runos
 // @match       https://znhd.hunan.chinatax.gov.cn:8443/*
 // @match       https://example.com/*
@@ -616,7 +616,7 @@ function DM() {
                                             CAT_UI.Button(key, {
                                                 type: "default",
                                                 onClick() {
-                                                    //safeCopyText(value);
+                                                    safeCopyText(value);
                                                     //CAT_UI.Message.success("已复制: " + key);
                                                     setCommonPhrasesVisible(false);
                                                     // 2. 把 value 追加到 TinyMCE 已有内容后面
