@@ -4,7 +4,7 @@
 // @version      25.12.28
 // @description  自动处理法规页面答题并点击.next元素，支持新API查询答案，答题正确后自动上传题目到题库
 // @author       runos
-// @match        *://hn.12348.gov.cn/*
+// @match        http://hn.12348.gov.cn/fxmain/*
 // @icon         http://hn.12348.gov.cn/favicon.ico
 // @require      https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js
 // @require      https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.min.js
@@ -52,7 +52,7 @@
         scriptId: SCRIPT_ID,
         scriptName: GM_info.script.name,
         version: GM_info.script.version,
-        githubRepo: '',
+        githubRepo: 'Run-os/UserScript',
         iconCdnPrefix: "https://unpkg.com/lucide-static@latest/icons/",
     });
 
@@ -159,6 +159,7 @@
                 <p>本代码使用自建题库进行答题，遇到题库中没有的题目，会自动上传到题库。</p>
                 <p>-------</p>
                 <p>登录状态: <span id="${SCRIPT_ID}-token-status">${tokenStatus}</span></p>
+                <p></p>
                 <button id="${SCRIPT_ID}-login-btn" class="${SCRIPT_ID}-dialog-button">登录题库</button>
                 <button id="${SCRIPT_ID}-monitor-btn" class="${SCRIPT_ID}-dialog-button primary">${state.isStopped ? '开始监控' : '停止监控'}</button>
             `);
