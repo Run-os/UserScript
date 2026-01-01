@@ -2,7 +2,7 @@
 // @name        征纳互动人数和在线监控
 // @namespace   https://scriptcat.org/
 // @description 实施监控征纳互动等待人数和在线状态，支持语音播报、webhook推送文本和图片、自定义常用语
-// @version     25.12.27
+// @version     25.12.31
 // @author      runos
 // @match       https://znhd.hunan.chinatax.gov.cn:8443/*
 // @match       https://example.com/*
@@ -616,7 +616,7 @@ function DM() {
                                             CAT_UI.Button(key, {
                                                 type: "default",
                                                 onClick() {
-                                                    //safeCopyText(value);
+                                                    safeCopyText(value);
                                                     //CAT_UI.Message.success("已复制: " + key);
                                                     setCommonPhrasesVisible(false);
                                                     // 2. 把 value 追加到 TinyMCE 已有内容后面
@@ -756,27 +756,44 @@ function checkCount() {
     }
 }
 
-/* 工具函数：往 TinyMCE 追加文本 */
-function appendToTinyMCE(textToAppend) {
-    const f = document.querySelector('.input-box iframe.tox-edit-area__iframe');
-    if (f) {
-        const body = f.contentDocument.querySelector('body#tinymce');
-        const newText = body.textContent + textToAppend;
+/**
+ * 向【页面里第一个 TinyMCE】追加文本并立即生效
+ * @param {string} text2append  要追加的文本
+ * @returns {string}            追加后的完整纯文本
+ */
+function appendToTinyMCE(text2append = 'xxxxx') {
+  /* 1. 拿到编辑器实例（动态匹配，不依赖 id） */
+  const editors = window.tinymce?.editors ?? [];   // 所有 TinyMCE 实例
+  const ed = editors.find(e => e.inline === false); // 先拿第一个非 inline 的
+  // 如果上面没拿到，再随便拿一个
+  const editor = ed || editors[0];
 
-        // 直接改 DOM
-        body.textContent = newText;
+  /* 2. 真正干活 */
+  if (editor) {
+    const body = editor.getBody();          // 等同于 iframe.body
+    const oldHtml = body.innerHTML;
+    body.innerHTML += text2append;          // 追加（支持富文本）
+    editor.save();                          // 同步回 textarea
+    editor.setDirty(true);                  // 标记脏
+    editor.selection.select(body, true);    // 把光标放末尾
+    editor.selection.collapse(false);
+  } else {
+    /* 3. 兜底：直接改 DOM + 触发事件 */
+    const iframe = document.querySelector('.input-box iframe.tox-edit-area__iframe');
+    if (!iframe) { console.error('❌ 找不到 TinyMCE iframe'); return ''; }
+    const body = iframe.contentDocument.querySelector('body#tinymce');
+    if (!body) { console.error('❌ 找不到 body#tinymce'); return ''; }
 
-        // 如果希望进入撤销栈，再调用一次官方 API
-        if (window.tinymce && tinymce.activeEditor) {
-            tinymce.activeEditor.setContent(newText);
-        }
+    body.textContent += text2append;
+    ['input', 'change', 'keyup'].forEach(ev =>
+      body.dispatchEvent(new Event(ev, { bubbles: true }))
+    );
+  }
 
-        console.log('追加后文本：', newText);
-    } else {
-        console.error('❌ 找不到 TinyMCE iframe, 无法追加文本, 已安全复制到剪贴板');
-        safeCopyText(textToAppend);
-        return;
-    }
+  const finalText = editor ? editor.getContent({ format: 'text' })
+                           : document.querySelector('body#tinymce')?.textContent ?? '';
+  console.log('✅ 已追加并同步：', finalText);
+  return finalText;
 }
 
 // 语音播报函数
