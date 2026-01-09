@@ -151,15 +151,39 @@ function DM() {
     // 初始化时检测webhook配置是否为空，为空则自动生成
     CAT_UI.useEffect(() => {
         // 检测webhookUrl和webhookToken是否为空，且isChecked为true
+        // 同时检查是否曾经有过有效配置（通过检查postToken是否为空来判断）
         if (isChecked && (!webhookUrl || !webhookToken)) {
-            // 执行生成配置的逻辑（与生成配置按钮相同）
-            const newWebhookUrl = "https://znhd-service.zeabur.app";
-            const newWebhookToken = Math.random().toString(36).substring(2, 15);
-            const newPostToken = btoa(newWebhookToken);
-            patchAllvalue({ webhookUrl: newWebhookUrl, webhookToken: newWebhookToken, postToken: newPostToken });
-            addLog('webhook配置为空，已自动生成配置', 'info');
+            const hadPreviousConfig = postToken && postToken.length > 0;
+            if (hadPreviousConfig) {
+                // 用户曾经配置过，尝试从localStorage恢复
+                addLog('检测到配置丢失，尝试从localStorage恢复', 'warning');
+                const savedData = loadAllvalue();
+                if (savedData.webhookUrl && savedData.webhookToken) {
+                    patchAllvalue({
+                        webhookUrl: savedData.webhookUrl,
+                        webhookToken: savedData.webhookToken,
+                        postToken: savedData.postToken
+                    });
+                    addLog('配置已从localStorage恢复', 'success');
+                } else {
+                    // localStorage中也没有有效配置，才生成新配置
+                    generateNewWebhookConfig();
+                }
+            } else {
+                // 从未配置过，生成新配置
+                generateNewWebhookConfig();
+            }
         }
     }, []);
+
+    // 统一的生成webhook配置函数
+    function generateNewWebhookConfig() {
+        const newWebhookUrl = "https://znhd-service.zeabur.app";
+        const newWebhookToken = Math.random().toString(36).substring(2, 15);
+        const newPostToken = btoa(newWebhookToken);
+        patchAllvalue({ webhookUrl: newWebhookUrl, webhookToken: newWebhookToken, postToken: newPostToken });
+        addLog('webhook配置为空，已自动生成配置', 'info');
+    }
 
     // webhook 配置变化时自动应用最新连接状态
     CAT_UI.useEffect(() => {
@@ -345,8 +369,14 @@ function DM() {
                             modalContent.appendChild(qrContainer);
                             modalOverlay.appendChild(modalContent);
 
-                            // 点击模态框任意位置关闭
+                            // 点击模态框任意位置关闭并复制二维码URL到剪贴板
                             modalOverlay.addEventListener('click', () => {
+                                // 复制二维码对应的URL到剪贴板
+                                safeCopyText(url);
+                                // 显示复制成功提示
+                                CAT_UI.Message.success("URL已复制到剪贴板");
+
+                                // 关闭模态框
                                 if (document.getElementById('qrCodeModal')) {
                                     document.body.removeChild(modalOverlay);
                                 }
@@ -405,12 +435,8 @@ function DM() {
                                     CAT_UI.Button("[生成配置]", {
                                         type: "link",
                                         onClick: () => {
-                                            // 执行生成配置的逻辑（与生成配置按钮相同）
-                                            const newWebhookUrl = "https://webhook-service.zeabur.app";
-                                            const newWebhookToken = Math.random().toString(36).substring(2, 15);
-                                            const newPostToken = btoa(newWebhookToken);
-                                            patchAllvalue({ webhookUrl: newWebhookUrl, webhookToken: newWebhookToken, postToken: newPostToken });
-                                            addLog('webhook配置为空，已自动生成配置', 'info');
+                                            // 使用统一的配置生成函数
+                                            generateNewWebhookConfig();
                                         },
                                         style: {
                                             padding: "0 8px"
