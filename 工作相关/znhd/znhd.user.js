@@ -79,6 +79,7 @@ const DEFAULTS = {
     webhookToken: "",
     JsonUrl: "",
     postToken: "",
+    isChecked: false,
 };
 
 // 从localStorage加载Allvalue数据
@@ -123,7 +124,7 @@ function DM() {
     const patchAllvalue = (kv) => updateAllvalue({ ...Allvalue, ...kv });
 
     // 解构状态变量，方便后续使用
-    const { voiceEnabled, getwebhookStatus, webhookUrl, webhookToken, postToken, JsonUrl } = Allvalue;
+    const { voiceEnabled, getwebhookStatus, webhookUrl, webhookToken, postToken, JsonUrl, isChecked } = Allvalue;
 
     const voiceEnabledText = voiceEnabled ? "🔊 语音" : "🔇 静音";
     const getwebhookStatusText = getwebhookStatus ? "▶️ 运行中" : "⏸️ 已停止";
@@ -139,6 +140,7 @@ function DM() {
     // 常用语加载状态
     const [phrasesLoading, setPhrasesLoading] = CAT_UI.useState(false);
 
+
     // 设置日志回调函数
     CAT_UI.useEffect(() => {
         setLogEntriesCallback = setLogEntries;
@@ -149,8 +151,8 @@ function DM() {
 
     // 初始化时检测webhook配置是否为空，为空则自动生成
     CAT_UI.useEffect(() => {
-        // 检测webhookUrl和webhookToken是否为空
-        if (!webhookUrl || !webhookToken) {
+        // 检测webhookUrl和webhookToken是否为空，且isChecked为true
+        if (isChecked && (!webhookUrl || !webhookToken)) {
             // 执行生成配置的逻辑（与生成配置按钮相同）
             const newWebhookUrl = "https://znhd-service.zeabur.app";
             const newWebhookToken = Math.random().toString(36).substring(2, 15);
@@ -439,6 +441,13 @@ function DM() {
                                 "1. 配置好webhookUrl，webhookToken（即clientToken），postToken（即appToken）后，点击运行状态按钮启动webhook推送监听\n2. 🔘[使用教程]里面可查看脚本详细介绍\n3. 🔘[生成配置]可以生成一个随机的测试配置，供临时使用。注意：该配置仅供测试使用，如果需要长期使用，请自建webhook服务\n",
                             ),
                             CAT_UI.Divider("webhook设置"),  // 带文本的分隔线
+                            CAT_UI.Checkbox("如果配置为空，自动生成配置", {
+                                checked: isChecked,
+                                onChange(checked) {
+                                    patchAllvalue({ isChecked: checked });
+                                    addLog(`复选框状态: ${checked}`, 'info');
+                                }
+                            }),
                             CAT_UI.createElement(
                                 "div",
                                 {
@@ -739,7 +748,7 @@ function checkCount() {
             speak("征纳互动有人来了");
         }
 
-        // 检查离线状态 - 使用更灵活的选择器
+        // 检查掉线状态 - 使用更灵活的选择器
         if (!domCache.offlineElement) {
             domCache.offlineElement = document.querySelector('.t-dialog__body__icon:nth-child(2)') ||
                 document.querySelector('.t-dialog__body__icon') ||
@@ -747,9 +756,9 @@ function checkCount() {
         }
 
         const offlineElement = domCache.offlineElement;
-        if (offlineElement && offlineElement.textContent.trim().includes('离线')) {
-            addLog('征纳互动已离线', 'warning');
-            speak("征纳互动已离线");
+        if (offlineElement && offlineElement.textContent.trim().includes('掉线')) {
+            addLog('征纳互动已掉线', 'warning');
+            speak("征纳互动已掉线");
         }
     } catch (error) {
         addLog(`检测错误: ${error.message}`, 'warning');
@@ -762,38 +771,38 @@ function checkCount() {
  * @returns {string}            追加后的完整纯文本
  */
 function appendToTinyMCE(text2append = 'xxxxx') {
-  /* 1. 拿到编辑器实例（动态匹配，不依赖 id） */
-  const editors = window.tinymce?.editors ?? [];   // 所有 TinyMCE 实例
-  const ed = editors.find(e => e.inline === false); // 先拿第一个非 inline 的
-  // 如果上面没拿到，再随便拿一个
-  const editor = ed || editors[0];
+    /* 1. 拿到编辑器实例（动态匹配，不依赖 id） */
+    const editors = window.tinymce?.editors ?? [];   // 所有 TinyMCE 实例
+    const ed = editors.find(e => e.inline === false); // 先拿第一个非 inline 的
+    // 如果上面没拿到，再随便拿一个
+    const editor = ed || editors[0];
 
-  /* 2. 真正干活 */
-  if (editor) {
-    const body = editor.getBody();          // 等同于 iframe.body
-    const oldHtml = body.innerHTML;
-    body.innerHTML += text2append;          // 追加（支持富文本）
-    editor.save();                          // 同步回 textarea
-    editor.setDirty(true);                  // 标记脏
-    editor.selection.select(body, true);    // 把光标放末尾
-    editor.selection.collapse(false);
-  } else {
-    /* 3. 兜底：直接改 DOM + 触发事件 */
-    const iframe = document.querySelector('.input-box iframe.tox-edit-area__iframe');
-    if (!iframe) { console.error('❌ 找不到 TinyMCE iframe'); return ''; }
-    const body = iframe.contentDocument.querySelector('body#tinymce');
-    if (!body) { console.error('❌ 找不到 body#tinymce'); return ''; }
+    /* 2. 真正干活 */
+    if (editor) {
+        const body = editor.getBody();          // 等同于 iframe.body
+        const oldHtml = body.innerHTML;
+        body.innerHTML += text2append;          // 追加（支持富文本）
+        editor.save();                          // 同步回 textarea
+        editor.setDirty(true);                  // 标记脏
+        editor.selection.select(body, true);    // 把光标放末尾
+        editor.selection.collapse(false);
+    } else {
+        /* 3. 兜底：直接改 DOM + 触发事件 */
+        const iframe = document.querySelector('.input-box iframe.tox-edit-area__iframe');
+        if (!iframe) { console.error('❌ 找不到 TinyMCE iframe'); return ''; }
+        const body = iframe.contentDocument.querySelector('body#tinymce');
+        if (!body) { console.error('❌ 找不到 body#tinymce'); return ''; }
 
-    body.textContent += text2append;
-    ['input', 'change', 'keyup'].forEach(ev =>
-      body.dispatchEvent(new Event(ev, { bubbles: true }))
-    );
-  }
+        body.textContent += text2append;
+        ['input', 'change', 'keyup'].forEach(ev =>
+            body.dispatchEvent(new Event(ev, { bubbles: true }))
+        );
+    }
 
-  const finalText = editor ? editor.getContent({ format: 'text' })
-                           : document.querySelector('body#tinymce')?.textContent ?? '';
-  console.log('✅ 已追加并同步：', finalText);
-  return finalText;
+    const finalText = editor ? editor.getContent({ format: 'text' })
+        : document.querySelector('body#tinymce')?.textContent ?? '';
+    console.log('✅ 已追加并同步：', finalText);
+    return finalText;
 }
 
 // 语音播报函数
