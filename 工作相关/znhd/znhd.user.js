@@ -2,7 +2,7 @@
 // @name        征纳互动人数和在线监控
 // @namespace   https://scriptcat.org/
 // @description 实施监控征纳互动等待人数和在线状态，支持语音播报、webhook推送文本和图片、自定义常用语
-// @version     25.12.31
+// @version     26.1.9
 // @author      runos
 // @match       https://znhd.hunan.chinatax.gov.cn:8443/*
 // @match       https://example.com/*
@@ -77,7 +77,6 @@ const DEFAULTS = {
     getwebhookStatus: true,
     webhookUrl: "",
     webhookToken: "",
-    JsonUrl: "",
     postToken: "",
     isChecked: false,
 };
@@ -124,7 +123,7 @@ function DM() {
     const patchAllvalue = (kv) => updateAllvalue({ ...Allvalue, ...kv });
 
     // 解构状态变量，方便后续使用
-    const { voiceEnabled, getwebhookStatus, webhookUrl, webhookToken, postToken, JsonUrl, isChecked } = Allvalue;
+    const { voiceEnabled, getwebhookStatus, webhookUrl, webhookToken, postToken, isChecked } = Allvalue;
 
     const voiceEnabledText = voiceEnabled ? "🔊 语音" : "🔇 静音";
     const getwebhookStatusText = getwebhookStatus ? "▶️ 运行中" : "⏸️ 已停止";
@@ -175,15 +174,11 @@ function DM() {
 
     // 加载常用语数据的函数
     const loadPhrasesData = () => {
-        if (!JsonUrl) {
-            CAT_UI.Message.warning('请先配置 JsonUrl');
-            return;
-        }
 
         setPhrasesLoading(true);
         GM_xmlhttpRequest({
             method: 'GET',
-            url: JsonUrl,
+            url: "https://file.122050.xyz/directlink/1/znhdText.json",
             onload: function (response) {
                 try {
                     const data = JSON.parse(response.responseText);
@@ -206,12 +201,12 @@ function DM() {
         });
     };
 
-    // 当 JsonUrl 变化时自动加载数据
+    // 常用语抽屉打开时自动加载数据
     CAT_UI.useEffect(() => {
-        if (JsonUrl) {
+        if (commonPhrasesVisible) {
             loadPhrasesData();
         }
-    }, [JsonUrl]);
+    }, [commonPhrasesVisible]);
 
     // 主UI布局
     return CAT_UI.Space(
@@ -571,27 +566,18 @@ function DM() {
                     CAT_UI.Drawer(
                         // 抽屉内容
                         CAT_UI.createElement("div", { style: { textAlign: "left" } }, [
-                            // JsonUrl 配置输入框
+                            // 显示当前JsonUrl
                             CAT_UI.createElement(
                                 "div",
                                 {
                                     style: {
-                                        display: "flex",          // 弹性布局
-                                        justifyContent: "space-between",  // 水平方向两端对齐
-                                        alignItems: "center",     // 垂直方向居中对齐
-                                        marginBottom: "16px"
-                                    },
+                                        marginBottom: "16px",
+                                        color: "#666",
+                                        fontSize: "12px",
+                                        wordBreak: "break-all"
+                                    }
                                 },
-                                [   // 子元素数组
-                                    CAT_UI.Text("JsonUrl:"),  // 文本提示
-                                    CAT_UI.Input({          // 输入框
-                                        value: JsonUrl,
-                                        onChange(val) {
-                                            patchAllvalue({ JsonUrl: val });
-                                        },
-                                        style: { flex: 1, marginLeft: "8px" }   // 占满剩余空间并加左边距
-                                    }),
-                                ]
+                                "数据源: https://file.122050.xyz/directlink/1/znhdText.json"
                             ),
                             // 重新加载按钮
                             CAT_UI.Button("重新加载常用语", {
@@ -600,26 +586,12 @@ function DM() {
                                 onClick: loadPhrasesData,
                                 style: { marginBottom: "16px", width: "100%" }
                             }),
-                            CAT_UI.Divider("使用说明"),
-                            CAT_UI.createElement(
-                                "p",
-                                {
-                                    style: {
-                                        marginBottom: "16px",
-                                        color: "#666",
-                                        lineHeight: "1.6",
-                                        textAlign: "left",
-                                        whiteSpace: "pre-line"
-                                    }
-                                },
-                                "JsonUrl 为一个 JSON 直链文件\nJSON 格式: {\"按钮文本\": \"复制内容\", ...}",
-                            ),
                             CAT_UI.Divider("常用语列表"),
                             // 动态生成常用语按钮
                             phrasesLoading ?
                                 CAT_UI.createElement("div", { style: { textAlign: "center", padding: "20px" } }, "加载中...") :
                                 (Object.keys(phrasesData).length === 0 ?
-                                    CAT_UI.createElement("div", { style: { textAlign: "center", padding: "20px", color: "#999" } }, "暂无常用语数据，请配置 JsonUrl 并加载") :
+                                    CAT_UI.createElement("div", { style: { textAlign: "center", padding: "20px", color: "#999" } }, "暂无常用语数据，请点击上方按钮加载") :
                                     CAT_UI.Space(
                                         Object.entries(phrasesData).map(([key, value]) =>
                                             CAT_UI.Button(key, {
