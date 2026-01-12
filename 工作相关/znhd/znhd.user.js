@@ -1030,14 +1030,66 @@ function connectwebhookWebSocket(webhookUrl, webhookToken) {
         console.log('[webhook] WebSocket 连接成功');
         addLog('webhook 推送监听已启动', 'success');
     };
+    // 二进制数据传输状态管理
+    let binaryTransfer = null;
+
     webhookWS.onmessage = async (event) => {
         try {
+            // 判断是否为二进制数据
+            if (event.data instanceof Blob) {
+                if (binaryTransfer && binaryTransfer.dataChunks) {
+                    // 收集二进制数据块
+                    binaryTransfer.dataChunks.push(event.data);
+                    console.log(`[webhook] 收到二进制数据块 ${binaryTransfer.dataChunks.length}/${binaryTransfer.totalChunks}`);
+                }
+                return;
+            }
+
             // 解析 JSON 消息
             const msg = JSON.parse(event.data);
-            const { id, title, message: text, priority, date } = msg;
-            //CAT_UI.Message.success(`收到webhook推送：${text}`);
+            const { id, title, message: text, priority, date, type, data_type, filename, size, content_type, transfer_id } = msg;
             console.log('[webhook] 收到消息:', msg);
-            // 处理图片消息
+
+            // 处理二进制传输开始
+            if (type === 'binary_start' && data_type === 'image') {
+                console.log(`[webhook] 开始接收二进制图片: ${filename}, 大小: ${size} bytes`);
+                binaryTransfer = {
+                    transfer_id: transfer_id,
+                    filename: filename,
+                    content_type: content_type || 'image/jpeg',
+                    totalSize: size,
+                    dataChunks: [],
+                    startTime: Date.now()
+                };
+                return;
+            }
+
+            // 处理二进制传输结束
+            if (type === 'binary_end' && binaryTransfer && binaryTransfer.transfer_id === transfer_id) {
+                console.log(`[webhook] 二进制图片接收完成, 耗时: ${Date.now() - binaryTransfer.startTime}ms, 共 ${binaryTransfer.dataChunks.length} 个数据块`);
+
+                // 合并所有数据块
+                if (binaryTransfer.dataChunks.length > 0) {
+                    const blob = new Blob(binaryTransfer.dataChunks, { type: binaryTransfer.content_type });
+
+                    // 转换为 Base64 并复制到剪贴板
+                    const base64 = await blobToBase64(blob);
+                    const copied = await copyBase64ImageToClipboard(base64);
+
+                    if (copied) {
+                        CAT_UI.Message.success(`webhook消息：图片已复制到剪贴板 (${binaryTransfer.filename}, ${(binaryTransfer.totalSize / 1024).toFixed(2)}KB)`, 'success');
+                        addLog(`webhook消息：图片已复制到剪贴板 - ${binaryTransfer.filename} (${(binaryTransfer.totalSize / 1024).toFixed(2)}KB)`, 'success');
+                    } else {
+                        CAT_UI.Message.warning('webhook消息：图片复制失败', 'warning');
+                        addLog(`webhook消息：图片复制失败 - ${binaryTransfer.filename}`, 'warning');
+                    }
+                }
+
+                binaryTransfer = null;
+                return;
+            }
+
+            // 处理旧版 Base64 图片消息（向后兼容）
             if (text && isBase64ImageString(text)) {
                 const copied = await copyBase64ImageToClipboard(text);
                 if (copied && text) {
@@ -1049,6 +1101,7 @@ function connectwebhookWebSocket(webhookUrl, webhookToken) {
                 }
                 return;
             }
+
             // 处理文本消息
             if (text) {
                 safeCopyText(text);
