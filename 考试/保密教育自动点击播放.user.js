@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         保密教育自动点击播放
 // @namespace    http://tampermonkey.net/
-// @version      1.0.0
+// @version      26.07.21-v1
 // @description  保密教育自动点击播放
 // @author       Run-os
 // @match        https://www.baomi.org.cn/bmVideo?*

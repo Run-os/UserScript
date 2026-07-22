@@ -1,9 +1,10 @@
 // ==UserScript==
 // @name         百度网盘播放器替换(ArtPlayer+hls.js)
 // @namespace    http://tampermonkey.net/
-// @version      2.3.6
+// @version      26.07.22-v1
 // @description  开源免费复刻：用 ArtPlayer + hls.js 整体替换百度网盘原生播放器。复用网盘自身 /api/streaming 流媒体接口（带 adToken / jsToken / vip 鉴权）拿到多清晰度 M3U8，仅替换前端渲染层，不破解视频源。v2.1 重写拦截逻辑：照搬参考脚本的「轮询 destroyPlayer + 先初始化后销毁」顺序，并额外增加 document-start 阶段 CSS 隐藏原生播放器 + MutationObserver 守卫，彻底杜绝「两个视频」。数据提取路径参照网盘 Vue3+Pinia 真实结构（$pinia.state._rawValue.videoinfo）。
 // @author       Run-os
+// @icon         https://th.bing.com/th?id=ODLS.039b3eb8-253e-4d80-8727-6e7d039c3891&w=32&h=32&qlt=90&pcl=fffffa&o=6&pid=1.2
 // @match        https://pan.baidu.com/pfile/video*
 // @match        https://pan.baidu.com/play/video*
 // @match        https://pan.baidu.com/pfile/mboxvideo*

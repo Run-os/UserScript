@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         百度网盘打开中文字幕
 // @namespace    http://tampermonkey.net/
-// @version      26.7.26
+// @version      26.07.22-v1
 // @description  百度网盘播放视频时自动打开中文字幕，并自动开始播放
 // @author       Run-os
 // @match        https://pan.baidu.com/pfile/video?path=*.mp4*

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         数据剔除
 // @namespace    http://tampermonkey.net/
-// @version      1.3
+// @version      26.07.21-v1
 // @description  自动创建控制面板，填充指定日期到目标输入框，并支持日期递增与面板关闭（现代化轻量化UI）
 // @author       runos
 // @match        http://85.16.18.180:8080/*

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         湖南学法网12348自动答题--自建题库版
 // @namespace    http://tampermonkey.net/
-// @version      25.12.28
+// @version      25.12.28-v1
 // @description  自动处理法规页面答题并点击.next元素，支持新API查询答案，答题正确后自动上传题目到题库
 // @author       runos
 // @match        http://hn.12348.gov.cn/fxmain/*
