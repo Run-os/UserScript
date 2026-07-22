@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         百度网盘播放器替换(ArtPlayer+hls.js)
 // @namespace    http://tampermonkey.net/
-// @version      2.3.5
+// @version      2.3.6
 // @description  开源免费复刻：用 ArtPlayer + hls.js 整体替换百度网盘原生播放器。复用网盘自身 /api/streaming 流媒体接口（带 adToken / jsToken / vip 鉴权）拿到多清晰度 M3U8，仅替换前端渲染层，不破解视频源。v2.1 重写拦截逻辑：照搬参考脚本的「轮询 destroyPlayer + 先初始化后销毁」顺序，并额外增加 document-start 阶段 CSS 隐藏原生播放器 + MutationObserver 守卫，彻底杜绝「两个视频」。数据提取路径参照网盘 Vue3+Pinia 真实结构（$pinia.state._rawValue.videoinfo）。
 // @author       Run-os
 // @match        https://pan.baidu.com/pfile/video*
@@ -29,6 +29,7 @@
         DEBUG: true,
         APP_ID: 250528, // 网盘 web 端 app_id（参考脚本实测值）
         AUTOPLAY: true, // 自动播放：浏览器策略禁止带声音自动播放，故先静音起播，用户首次交互后恢复声音
+        RESUME: true,   // 播放进度记忆：按文件（fs_id 优先/path 兜底）记录观看位置，重开时续播（与清晰度无关、有提示）
     };
 
     // 调试日志同时写入全局，便于 browser-use 通过 js() 读取（console 日志加载后难以回溯）
@@ -117,6 +118,30 @@
             html: templates[tpl],
             url: getUrl('M3U8_AUTO_' + tpl) + '&adToken=' + encodeURIComponent(adToken || ''),
         }));
+    }
+
+    // ===== 播放进度记忆（localStorage，按文件 fs_id/path 存，支持续播）=====
+    function progressKey(file) {
+        const id = (file && (file.fs_id || file.path)) || '';
+        return 'bdArtProgress:' + (typeof id === 'string' ? id : String(id));
+    }
+    function loadProgress(key) {
+        try {
+            const v = localStorage.getItem(key);
+            const n = v ? parseFloat(v) : 0;
+            return (n > 0 && isFinite(n)) ? n : 0;
+        } catch (e) { return 0; }
+    }
+    function saveProgress(key, time) {
+        try { if (time > 0) localStorage.setItem(key, String(Math.floor(time))); } catch (e) {}
+    }
+    function clearProgress(key) {
+        try { localStorage.removeItem(key); } catch (e) {}
+    }
+    function fmtTime(sec) {
+        sec = Math.floor(sec || 0);
+        const m = Math.floor(sec / 60), s = sec % 60;
+        return (m < 10 ? '0' + m : m) + ':' + (s < 10 ? '0' + s : s);
     }
 
     function playM3u8(video, url, art) {
@@ -263,8 +288,6 @@
                 // 初始海报：优先用网盘返回的缩略图，避免起播前纯黑（缺省则 undefined，ArtPlayer 忽略）
                 poster: (file && file.thumbs && (file.thumbs.url3 || file.thumbs.url2 || file.thumbs.url1)) || undefined,
                 miniProgressBar: true, // 失焦且播放时显示迷你进度条
-                autoPlayback: true,    // 播放进度记忆/续播：ArtPlayer 原生，按视频 URL 存 localStorage，重开自动 seek 回上次位置
-                                       // 注意：原生按 URL 键区分，换清晰度后 URL 不同则不会续播（与清晰度无关的自写版已废弃，改用此正统方案）
                 // 移动端（@match wap/home*）适配：内联播放 + 网页全屏自动旋转 + 锁定/长按快进
                 playsInline: true,
                 autoOrientation: true,
@@ -305,6 +328,45 @@
                 };
                 ['pointerdown', 'keydown', 'touchstart'].forEach((ev) =>
                     document.addEventListener(ev, restoreSound, { passive: true }));
+            }
+
+            // ===== 播放进度记忆 / 续播 =====
+            if (CONFIG.RESUME) {
+                const key = progressKey(file);
+                let lastSave = 0;
+                let applied = false;
+                const tryResume = () => {
+                    if (applied) return;
+                    const dur = (typeof art.duration === 'number') ? art.duration : 0;
+                    const saved = loadProgress(key);
+                    // 进度过短（<5s）或已接近片尾（>片长-5s）则不续播
+                    if (saved <= 5 || (dur && saved >= dur - 5)) { applied = true; return; }
+                    try {
+                        art.currentTime = saved; // 跳到上次位置
+                        applied = true;
+                        art.notice.show = '已续播至 ' + fmtTime(saved);
+                        log('resumed at', fmtTime(saved), '(saved', saved, 'dur', dur, ')');
+                    } catch (e) {
+                        dbg('resume seek error', e); // 失败则下次事件再试（applied 仍为 false）
+                    }
+                };
+                // 元数据加载 / 可播放后尝试续播一次
+                art.on('video:loadedmetadata', tryResume);
+                art.on('video:canplay', tryResume);
+                // 周期性（每 4s）+ 暂停时保存进度
+                art.on('video:timeupdate', () => {
+                    const now = Date.now();
+                    if (now - lastSave > 4000) {
+                        lastSave = now;
+                        try { saveProgress(key, art.currentTime); } catch (e) {}
+                    }
+                });
+                art.on('video:pause', () => { try { saveProgress(key, art.currentTime); } catch (e) {} });
+                // 播放结束：清除进度（下次从头开始），并触发连播（已有 goNext 处理）
+                art.on('video:ended', () => { try { clearProgress(key); } catch (e) {} });
+                // 页面卸载前兜底保存一次
+                window.addEventListener('beforeunload', () => { try { saveProgress(key, art.currentTime); } catch (e) {} });
+                log('resume/playback-progress enabled (key=' + key + ')');
             }
 
             // ===== 控制栏「倍速」选择器（紧贴画质，不进设置菜单）=====
