@@ -7,6 +7,7 @@
 // @match        https://zc-paimai.taobao.com/wow/pm/default/pc/*
 // @match        https://zc-item.taobao.com/auction/*
 // @match        https://sf-item.taobao.com/sf_item/*
+// @match        https://sf.taobao.com/list/*
 // @match        https://susong-item.taobao.com/auction/*
 // @match        https://z.taobao.com/*
 // @grant        none
