@@ -7,7 +7,6 @@
 // @scriptUrl    https://update.greasyfork.org/scripts/485552/『净网卫士』在线翻译.user.js
 // @scriptUrl    https://update.greasyfork.org/scripts/440871/骚扰拦截.user.js
 // @scriptUrl    https://update.greasyfork.org/scripts/27752/searchEngineJump 搜索引擎快捷跳转.user.js
-// @scriptUrl    https://cdn.jsdelivr.net/gh/AirBashX/UserScript@master/AnnoyancesInterception.user.js
 // @scriptUrl    https://cdn.jsdelivr.net/gh/AirBashX/UserScript@master/AutoUnfold.user.js
 // @scriptUrl    https://update.greasyfork.org/scripts/503067/Toc Bar, auto-generating table of content.user.js
 // @scriptUrl    https://windrunnermax.github.io/TKScript/copy.user.js
